@@ -13,27 +13,31 @@ const ChatInterface: React.FC = () => {
       const userMessage = { text: inputText, sender: "user" as const };
       setMessages((prev) => [...prev, userMessage]);
       setInputText("");
-      setIsFirstMessage(false); 
-
-      setIsLoading(true); 
-
+      setIsFirstMessage(false); // Move the textbox to the bottom
+  
       try {
-        const mockResponse = {
-          query: "First find me the top 3 months with highest energy usage. Then find me top 3 devices with highest energy usage for each month. And comment on each month's usage.",
-          response: "Okay, I've analyzed the energy usage data. The top 3 months with the highest energy consumption were **January 2025**, **October 2024**, and **December 2024**.\n\nHere's a breakdown of the top 3 energy-consuming devices for each of those months:\n\n- **January 2025:** The Bedroom AC, Kitchen Fan, and Living Room Light were the top energy consumers.\n- **October 2024:** The Living Room Light, Kitchen Fan, and Bedroom AC were the top energy consumers.\n- **December 2024:** The Bedroom AC, Living Room Light, and Kitchen Fan were the top energy consumers.\n\nIt appears that the Bedroom AC, Kitchen Fan, and Living Room Light are consistently among the highest energy consumers across these peak months.",
-        };
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const botMessage = { text: mockResponse.response, sender: "bot" as const };
+        const response = await fetch("http://backend-server-ip:8080/api/forward", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`,
+          },
+          body: JSON.stringify({
+            query: "First find me the top 3 months with highest energy usage. Then find me top 3 devices with highest energy usage for each month. And comment on each month's usage.",
+          }),
+        });
+  
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+  
+        const data = await response.json();
+        const botMessage = { text: data.response, sender: "bot" as const };
         setMessages((prev) => [...prev, botMessage]);
       } catch (error) {
         console.error('Error fetching AI response:', error);
-        
         const botMessage = { text: "Sorry, something went wrong. Please try again.", sender: "bot" as const };
         setMessages((prev) => [...prev, botMessage]);
-      } finally {
-        setIsLoading(false); 
       }
     }
   };
