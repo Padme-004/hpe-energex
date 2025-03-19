@@ -26,10 +26,10 @@ export default function Navbar() {
           <Link href="/" className="text-white hover:text-gray-300 text-xl">
             Home
           </Link>
-          <Link href="/about" className="text-white hover:text-gray-300 text-xl">
+          <Link href="/service" className="text-white hover:text-gray-300 text-xl">
             Service
           </Link>
-          <Link href="/contact" className="text-white hover:text-gray-300 text-xl">
+          <Link href="/aboutus" className="text-white hover:text-gray-300 text-xl">
             About Us
           </Link>
           <Link href="/contact" className="text-white hover:text-gray-300 text-xl">
