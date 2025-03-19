@@ -38,6 +38,9 @@ export default function Navbar() {
           <Link href="/chat" className="text-white hover:text-gray-300 text-xl">
             Chat
           </Link>
+          <Link href="/signup" className="text-white hover:text-gray-300 text-xl">
+            Sign Up
+          </Link>
         </div>
       </div>
     </nav>

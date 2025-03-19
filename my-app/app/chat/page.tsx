@@ -5,45 +5,45 @@ import ReactMarkdown from "react-markdown";
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<{ text: string; sender: "user" | "bot" }[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isFirstMessage, setIsFirstMessage] = useState(true);
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
     if (inputText.trim()) {
       const userMessage = { text: inputText, sender: "user" as const };
       setMessages((prev) => [...prev, userMessage]);
       setInputText("");
-      setIsFirstMessage(false); // Move the textbox to the bottom
-  
+      setIsLoading(true);
+
       try {
-        const response = await fetch("http://backend-server-ip:8080/api/forward", {
+        const response = await fetch("http://localhost:8080/api/forward", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`,
           },
-          body: JSON.stringify({
-            query: "First find me the top 3 months with highest energy usage. Then find me top 3 devices with highest energy usage for each month. And comment on each month's usage.",
-          }),
+          body: JSON.stringify({ query: inputText }),
         });
-  
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-  
+
+        setIsLoading(false);
+
+        if (!response.ok) throw new Error("Network response was not ok");
+
         const data = await response.json();
         const botMessage = { text: data.response, sender: "bot" as const };
         setMessages((prev) => [...prev, botMessage]);
       } catch (error) {
-        console.error('Error fetching AI response:', error);
-        const botMessage = { text: "Sorry, something went wrong. Please try again.", sender: "bot" as const };
-        setMessages((prev) => [...prev, botMessage]);
+        console.error("Error fetching AI response:", error);
+        setIsLoading(false);
+        setMessages((prev) => [
+          ...prev,
+          { text: "Sorry, something went wrong. Please try again.", sender: "bot" as const },
+        ]);
       }
     }
   };
 
   return (
     <div style={styles.container}>
+      {/* Chat Window */}
       <div style={styles.chatWindow}>
         {messages.map((message, index) => (
           <div
@@ -67,7 +67,6 @@ const ChatInterface: React.FC = () => {
                 ...(message.sender === "user" ? styles.userMessage : styles.botMessage),
               }}
             >
-             
               <ReactMarkdown
                 components={{
                   strong: ({ node, ...props }) => (
@@ -89,28 +88,10 @@ const ChatInterface: React.FC = () => {
             </div>
           </div>
         ))}
-       
         {isLoading && (
-          <div
-            style={{
-              ...styles.messageContainer,
-              ...styles.botContainer,
-            }}
-          >
-            <div
-              style={{
-                ...styles.avatar,
-                ...styles.botAvatar,
-              }}
-            >
-              🤖
-            </div>
-            <div
-              style={{
-                ...styles.message,
-                ...styles.botMessage,
-              }}
-            >
+          <div style={{ ...styles.messageContainer, ...styles.botContainer }}>
+            <div style={{ ...styles.avatar, ...styles.botAvatar }}>🤖</div>
+            <div style={{ ...styles.message, ...styles.botMessage }}>
               <div style={styles.loadingAnimation}>
                 <div style={styles.loadingDot}></div>
                 <div style={styles.loadingDot}></div>
@@ -120,16 +101,9 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
       </div>
-      <div
-        style={{
-          ...styles.inputContainer,
-          position: "fixed",
-          bottom: isFirstMessage ? "50%" : "20px", 
-          left: "50%",
-          transform: isFirstMessage ? "translate(-50%, 50%)" : "translateX(-50%)",
-          transition: "bottom 0.3s ease, transform 0.3s ease",
-        }}
-      >
+
+      {/* Input Container */}
+      <div style={styles.inputContainer}>
         <input
           type="text"
           value={inputText}
@@ -146,30 +120,29 @@ const ChatInterface: React.FC = () => {
   );
 };
 
-
 const styles = {
   container: {
     display: "flex",
     flexDirection: "column" as const,
     height: "100vh",
     backgroundColor: "#ffffff",
-    padding: "30px", 
+    padding: "20px",
     boxSizing: "border-box" as const,
-    position: "relative",
+    position: "relative", // ✅ Ensure relative positioning so the input doesn't float over the footer
   },
   chatWindow: {
     flex: 1,
     overflowY: "auto" as const,
-    marginBottom: "30px", 
-    padding: "30px", 
+    marginBottom: "100px", // Leave space for the input container
+    padding: "20px",
     backgroundColor: "#f0f0f0",
     borderRadius: "20px",
-    fontSize: "22px", 
+    fontSize: "22px",
   },
   messageContainer: {
     display: "flex",
     alignItems: "flex-end",
-    marginBottom: "20px", 
+    marginBottom: "20px",
   },
   userContainer: {
     justifyContent: "flex-end",
@@ -178,17 +151,17 @@ const styles = {
     justifyContent: "flex-start",
   },
   avatar: {
-    width: "60px", 
-    height: "60px", 
+    width: "60px",
+    height: "60px",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    margin: "0 20px", 
-    fontSize: "28px", 
+    margin: "0 20px",
+    fontSize: "28px",
   },
   userAvatar: {
-    backgroundColor: "#008080", 
+    backgroundColor: "#008080",
     color: "#ffffff",
   },
   botAvatar: {
@@ -196,14 +169,14 @@ const styles = {
     color: "#000000",
   },
   message: {
-    padding: "20px", 
-    borderRadius: "20px", 
+    padding: "20px",
+    borderRadius: "20px",
     maxWidth: "70%",
     wordWrap: "break-word" as const,
-    fontSize: "22px", 
+    fontSize: "22px",
   },
   userMessage: {
-    backgroundColor: "#008080", 
+    backgroundColor: "#008080",
     color: "#ffffff",
   },
   botMessage: {
@@ -212,26 +185,35 @@ const styles = {
   },
   inputContainer: {
     display: "flex",
-    gap: "20px", 
-    width: "90%", 
-    maxWidth: "1000px", 
+    gap: "20px",
+    width: "90%",
+    maxWidth: "1000px",
+    position: "absolute" as const, // ✅ Change from "fixed" to "absolute"
+    bottom: "20px", // ✅ Ensures it stops above the footer
+    left: "50%",
+    transform: "translateX(-50%)",
+    padding: "10px",
+    backgroundColor: "#ffffff",
+    borderRadius: "15px",
+    boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
+    zIndex: 1000, // Keeps it above content but below the navbar
   },
   input: {
     flex: 1,
-    padding: "20px", 
-    borderRadius: "15px", 
-    border: "2px solid #ccc", 
+    padding: "20px",
+    borderRadius: "15px",
+    border: "2px solid #ccc",
     outline: "none",
-    fontSize: "22px", 
+    fontSize: "22px",
   },
   sendButton: {
-    padding: "20px 40px", 
-    backgroundColor: "#008080", 
+    padding: "20px 40px",
+    backgroundColor: "#008080",
     color: "#ffffff",
     border: "none",
-    borderRadius: "15px", 
+    borderRadius: "15px",
     cursor: "pointer",
-    fontSize: "22px", 
+    fontSize: "22px",
   },
   loadingAnimation: {
     display: "flex",
