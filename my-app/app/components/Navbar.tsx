@@ -26,7 +26,7 @@ export default function Navbar() {
           <Link href="/" className="text-white hover:text-gray-300 text-xl">
             Home
           </Link>
-          <Link href="/service" className="text-white hover:text-gray-300 text-xl">
+          <Link href="/servicesweoffer" className="text-white hover:text-gray-300 text-xl">
             Service
           </Link>
           <Link href="/aboutus" className="text-white hover:text-gray-300 text-xl">
