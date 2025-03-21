@@ -73,6 +73,7 @@
 import React from 'react';
 import Image from 'next/image';
 
+
 const AboutUs: React.FC = () => {
   return (
     <div className="about-us">
