@@ -1,11 +1,10 @@
 // 'use client'; //Sign in page with jwt, next version tries to store access token too
 // import React, { useState } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
+// import { useDispatch } from 'react-redux';
 // import { setToken } from '../features/authSlice';
 // import { useRouter } from 'next/navigation';
-// import type { RootState } from '../store/store';
+// import { useAuth } from '../context/AuthContext';
 
-// // JWT Decoding Helper Function with proper typing
 // interface DecodedToken {
 //   userId: number;
 //   houseId: number;
@@ -28,17 +27,17 @@
 //   }
 // };
 
-// const SignInPage: React.FC = () => {
-//   const [email, setEmail] = useState<string>('');
-//   const [password, setPassword] = useState<string>('');
-//   const [error, setError] = useState<string>('');
-//   const [isLoading, setIsLoading] = useState<boolean>(false);
+// const SignInPage = () => {
+//   const [email, setEmail] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [error, setError] = useState('');
+//   const [isLoading, setIsLoading] = useState(false);
   
 //   const dispatch = useDispatch();
 //   const router = useRouter();
-//   const authState = useSelector((state: RootState) => state.auth);
+//   const { setAccessToken } = useAuth();
 
-//   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+//   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault();
 //     setIsLoading(true);
 //     setError('');
@@ -47,33 +46,30 @@
 //       const response = await fetch('http://localhost:8080/api/users/login', {
 //         method: 'POST',
 //         headers: { 'Content-Type': 'application/json' },
-//         credentials: 'include', // Still maintains cookie-based auth
+//         credentials: 'include',
 //         body: JSON.stringify({ email, password }),
 //       });
-  
+
 //       const data = await response.json();
       
 //       if (!response.ok) {
 //         throw new Error(data.message || 'Login failed');
 //       }
-  
-//       // Extract token from either Authorization header or response body
+
 //       const authHeader = response.headers.get('Authorization');
 //       const accessToken = authHeader ? authHeader.replace('Bearer ', '') : data.accessToken;
   
 //       if (!accessToken) {
 //         throw new Error('No access token received');
 //       }
-  
+
 //       const decoded = decodeToken(accessToken);
 //       if (!decoded) {
 //         throw new Error('Received invalid token format');
 //       }
-  
-//       // Store token in localStorage (added)
+
+//       // Update all authentication systems
 //       localStorage.setItem('jwt', accessToken);
-      
-//       // Also store in Redux
 //       dispatch(setToken({
 //         token: accessToken,
 //         user: {
@@ -84,7 +80,8 @@
 //           role: decoded.role,
 //         }
 //       }));
-  
+//       setAccessToken(accessToken);
+
 //       router.push('/');
       
 //     } catch (err) {
@@ -94,9 +91,9 @@
 //       setIsLoading(false);
 //     }
 //   };
+
 //   return (
 //     <div className="min-h-screen bg-gray-100 flex flex-col">
-//       {/* Main Content */}
 //       <main className="flex-grow container mx-auto px-6 py-8">
 //         <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
 //           <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Login to your EnerGex Account</h1>
@@ -104,14 +101,12 @@
 //             Save while contributing to the planet!
 //           </p>
 
-//           {/* Error Message */}
 //           {error && (
 //             <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
 //               <p>{error}</p>
 //             </div>
 //           )}
 
-//           {/* Sign-In Form */}
 //           <form className="space-y-6" onSubmit={handleSubmit}>
 //             <div>
 //               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
@@ -167,7 +162,6 @@
 //         </div>
 //       </main>
 
-//       {/* Footer */}
 //       <footer className="bg-white shadow-md mt-8">
 //         <div className="container mx-auto px-6 py-4">
 //           <div className="flex justify-between items-center">
@@ -310,8 +304,10 @@ const SignInPage = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+              </div>
               <input
                 type="password"
                 id="password"
@@ -321,6 +317,13 @@ const SignInPage = () => {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                 required
               />
+              <a 
+                  href="/forgotpassword" 
+                  className="text-sm font-medium text-teal-600 hover:text-teal-500"
+                  style={{ color: '#008080' }}
+                >
+                  Forgot password?
+                </a>
             </div>
 
             <div>
