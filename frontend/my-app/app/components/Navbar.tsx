@@ -87,11 +87,11 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { accessToken, logout } = useAuth();
+  const { token, logout } = useAuth(); // Changed from accessToken to token
   const router = useRouter();
 
   const handleSignOut = () => {
-    logout(); // Clears context + localStorage
+    logout();
     router.push('/');
   };
 
@@ -105,13 +105,11 @@ export default function Navbar() {
         </Link>
 
         <div className="flex space-x-4 items-center">
-          {/* Always visible */}
           <Link href="/" className="text-white hover:text-gray-300 text-xl">Home</Link>
           <Link href="/servicesweoffer" className="text-white hover:text-gray-300 text-xl">Service</Link>
           <Link href="/aboutus" className="text-white hover:text-gray-300 text-xl">About Us</Link>
 
-          {/* Conditional links */}
-          {accessToken ? (
+          {token ? ( // Changed from accessToken to token
             <>
               <Link href="/contact" className="text-white hover:text-gray-300 text-xl">Dashboard</Link>
               <Link href="/chat" className="text-white hover:text-gray-300 text-xl">Chat</Link>

@@ -1,10 +1,10 @@
 // app/store/store.ts
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from '../features/authSlice';
+// Remove authReducer import
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
+    // Remove 'auth' from reducers
   },
 });
 

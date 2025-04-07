@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +10,16 @@ const ForgotPasswordPage = () => {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Handle redirect after success
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        router.push('/resetpassword');
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [message, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -17,8 +27,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch('http://localhost:8080/api/users/forgot-password', {
+      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -30,7 +39,7 @@ const ForgotPasswordPage = () => {
         throw new Error(data.message || 'Password reset failed');
       }
 
-      setMessage('Password reset link sent to your email!');
+      setMessage('Password reset link sent to your email! Redirecting...');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset link');
       console.error('Password reset error:', err);
@@ -43,7 +52,7 @@ const ForgotPasswordPage = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <main className="flex-grow container mx-auto px-6 py-8">
         <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Reset Your Password</h1>
+          <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Forgot your password?</h1>
           <p className="text-gray-700 mb-6">
             Enter your email and we'll send you a link to reset your password.
           </p>
@@ -60,44 +69,48 @@ const ForgotPasswordPage = () => {
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                required
-              />
-            </div>
+          {!message && (
+            <>
+              <form className="space-y-6" onSubmit={handleSubmit}>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    required
+                  />
+                </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50"
-                style={{ backgroundColor: '#008080' }}
-              >
-                {isLoading ? 'Sending...' : 'Send Reset Link'}
-              </button>
-            </div>
-          </form>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50"
+                    style={{ backgroundColor: '#008080' }}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </div>
+              </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Remember your password?{' '}
-              <Link 
-                href="/signin" 
-                className="font-medium text-teal-600 hover:text-teal-500"
-                style={{ color: '#008080' }}
-              >
-                Sign in
-              </Link>
-            </p>
-          </div>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Remember your password?{' '}
+                  <Link 
+                    href="/signin" 
+                    className="font-medium text-teal-600 hover:text-teal-500"
+                    style={{ color: '#008080' }}
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </main>
 

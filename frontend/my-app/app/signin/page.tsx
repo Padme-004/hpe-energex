@@ -1,7 +1,5 @@
-// 'use client'; //Sign in page with jwt, next version tries to store access token too
+// 'use client';
 // import React, { useState } from 'react';
-// import { useDispatch } from 'react-redux';
-// import { setToken } from '../features/authSlice';
 // import { useRouter } from 'next/navigation';
 // import { useAuth } from '../context/AuthContext';
 
@@ -33,9 +31,8 @@
 //   const [error, setError] = useState('');
 //   const [isLoading, setIsLoading] = useState(false);
   
-//   const dispatch = useDispatch();
 //   const router = useRouter();
-//   const { setAccessToken } = useAuth();
+//   const { login } = useAuth();
 
 //   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault();
@@ -68,19 +65,13 @@
 //         throw new Error('Received invalid token format');
 //       }
 
-//       // Update all authentication systems
-//       localStorage.setItem('jwt', accessToken);
-//       dispatch(setToken({
-//         token: accessToken,
-//         user: {
-//           userId: decoded.userId,
-//           houseId: decoded.houseId,
-//           email: decoded.email,
-//           username: decoded.username,
-//           role: decoded.role,
-//         }
-//       }));
-//       setAccessToken(accessToken);
+//       login(accessToken, {
+//         userId: decoded.userId,
+//         houseId: decoded.houseId,
+//         email: decoded.email,
+//         username: decoded.username,
+//         role: decoded.role,
+//       });
 
 //       router.push('/');
       
@@ -92,90 +83,62 @@
 //     }
 //   };
 
-//   return (
-//     <div className="min-h-screen bg-gray-100 flex flex-col">
-//       <main className="flex-grow container mx-auto px-6 py-8">
-//         <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
-//           <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Login to your EnerGex Account</h1>
-//           <p className="text-gray-700 mb-8">
-//             Save while contributing to the planet!
-//           </p>
+//   const handleSignUp = () => {
+//     router.push('/signup');
+//   };
 
+//   return (
+//     <div className="min-h-screen flex items-center justify-center bg-white p-4">
+//       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+//         <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Get Started with EnerGex</h1>
+        
+//         <form onSubmit={handleSubmit} className="space-y-4">
+//           <div>
+//             <input
+//               type="email"
+//               placeholder="Email"
+//               required
+//               value={email}
+//               onChange={(e) => setEmail(e.target.value)}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+//             />
+//           </div>
+          
+//           <div>
+//             <input
+//               type="password"
+//               placeholder="Password"
+//               required
+//               value={password}
+//               onChange={(e) => setPassword(e.target.value)}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+//             />
+//           </div>
+          
 //           {error && (
-//             <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-//               <p>{error}</p>
+//             <div className="text-red-500 text-sm text-center">
+//               {error}
 //             </div>
 //           )}
-
-//           <form className="space-y-6" onSubmit={handleSubmit}>
-//             <div>
-//               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-//               <input
-//                 type="email"
-//                 id="email"
-//                 name="email"
-//                 value={email}
-//                 onChange={(e) => setEmail(e.target.value)}
-//                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-//                 required
-//               />
-//             </div>
-
-//             <div>
-//               <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-//               <input
-//                 type="password"
-//                 id="password"
-//                 name="password"
-//                 value={password}
-//                 onChange={(e) => setPassword(e.target.value)}
-//                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-//                 required
-//               />
-//             </div>
-
-//             <div>
-//               <button
-//                 type="submit"
-//                 disabled={isLoading}
-//                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50"
-//                 style={{ backgroundColor: '#008080' }}
-//               >
-//                 {isLoading ? 'Signing in...' : 'Sign In'}
-//               </button>
-//             </div>
-//           </form>
-
-//           <div className="mt-6 text-center">
-//             <p className="text-sm text-gray-600">Don't have an account?</p>
-//             <div>
-//               <button
-//                 type="button"
-//                 onClick={() => router.push('/signup')}
-//                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white mt-2"
-//                 style={{ backgroundColor: '#008080' }}
-//               >
-//                 Sign Up
-//               </button>
-//             </div>
-//           </div>
+          
+//           <button
+//             type="submit"
+//             disabled={isLoading}
+//             className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition duration-300 disabled:opacity-50"
+//           >
+//             {isLoading ? 'Signing In...' : 'Sign In'}
+//           </button>
+//         </form>
+        
+//         <div className="mt-4 text-center">
+//           <button
+//             onClick={handleSignUp}
+//             className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition duration-300"
+//           >
+//             Create an Account
+//           </button>
 //         </div>
-//       </main>
-
-//       <footer className="bg-white shadow-md mt-8">
-//         <div className="container mx-auto px-6 py-4">
-//           <div className="flex justify-between items-center">
-//             <div className="text-sm text-gray-700">
-//               <p>Contact Details: <a href="mailto:nemr22ad06@emamit" className="hover:text-teal-800" style={{ color: '#008080' }}>nemr22ad06@emamit</a> | <a href="tel:911-9743282090" className="hover:text-teal-800" style={{ color: '#008080' }}>911-9743282090</a></p>
-//               <p>AMDS 2025 All rights reserved</p>
-//             </div>
-//             <div className="flex space-x-4">
-//               <a href="#" className="text-gray-400 hover:text-teal-800">Terms & Conditions</a>
-//               <a href="#" className="text-gray-400 hover:text-teal-800">Privacy Policy</a>
-//             </div>
-//           </div>
-//         </div>
-//       </footer>
+//       </div>
 //     </div>
 //   );
 // };
@@ -183,8 +146,6 @@
 // export default SignInPage;
 'use client';
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { setToken } from '../features/authSlice';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 
@@ -216,9 +177,8 @@ const SignInPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const dispatch = useDispatch();
   const router = useRouter();
-  const { setAccessToken } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,7 +186,7 @@ const SignInPage = () => {
     setError('');
   
     try {
-      const response = await fetch('http://localhost:8080/api/users/login', {
+      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -251,19 +211,13 @@ const SignInPage = () => {
         throw new Error('Received invalid token format');
       }
 
-      // Update all authentication systems
-      localStorage.setItem('jwt', accessToken);
-      dispatch(setToken({
-        token: accessToken,
-        user: {
-          userId: decoded.userId,
-          houseId: decoded.houseId,
-          email: decoded.email,
-          username: decoded.username,
-          role: decoded.role,
-        }
-      }));
-      setAccessToken(accessToken);
+      login(accessToken, {
+        userId: decoded.userId,
+        houseId: decoded.houseId,
+        email: decoded.email,
+        username: decoded.username,
+        role: decoded.role,
+      });
 
       router.push('/');
       
@@ -275,99 +229,75 @@ const SignInPage = () => {
     }
   };
 
+  const handleSignUp = () => {
+    router.push('/signup');
+  };
+
+  const handleForgotPassword = () => {
+    router.push('/forgotpassword'); // Make sure this route exists in your app
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <main className="flex-grow container mx-auto px-6 py-8">
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Login to your EnerGex Account</h1>
-          <p className="text-gray-700 mb-8">
-            Save while contributing to the planet!
-          </p>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-              <p>{error}</p>
-            </div>
-          )}
-
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-              </div>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                required
-              />
-              <a 
-                  href="/forgotpassword" 
-                  className="text-sm font-medium text-teal-600 hover:text-teal-500"
-                  style={{ color: '#008080' }}
-                >
-                  Forgot password?
-                </a>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50"
-                style={{ backgroundColor: '#008080' }}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">Don't have an account?</p>
-            <div>
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+        <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Get Started with EnerGex</h1>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="email"
+              placeholder="Email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <input
+              type="password"
+              placeholder="Password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+            <div className="text-right">
               <button
                 type="button"
-                onClick={() => router.push('/signup')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white mt-2"
-                style={{ backgroundColor: '#008080' }}
+                onClick={handleForgotPassword}
+                className="text-sm text-teal-600 hover:text-teal-800 hover:underline focus:outline-none"
               >
-                Sign Up
+                Forgot Password?
               </button>
             </div>
           </div>
-        </div>
-      </main>
-
-      <footer className="bg-white shadow-md mt-8">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-700">
-              <p>Contact Details: <a href="mailto:nemr22ad06@emamit" className="hover:text-teal-800" style={{ color: '#008080' }}>nemr22ad06@emamit</a> | <a href="tel:911-9743282090" className="hover:text-teal-800" style={{ color: '#008080' }}>911-9743282090</a></p>
-              <p>AMDS 2025 All rights reserved</p>
+          
+          {error && (
+            <div className="text-red-500 text-sm text-center">
+              {error}
             </div>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-teal-800">Terms & Conditions</a>
-              <a href="#" className="text-gray-400 hover:text-teal-800">Privacy Policy</a>
-            </div>
-          </div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition duration-300 disabled:opacity-50"
+          >
+            {isLoading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+        
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleSignUp}
+            className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition duration-300"
+          >
+            Create an Account
+          </button>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };
