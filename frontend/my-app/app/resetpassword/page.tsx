@@ -1,10 +1,10 @@
-// Change password is for logged in users
+//Change password is for logged in users
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,8 +48,6 @@ export default function ForgotPasswordPage() {
           newPassword
         }),
       });
-      
-      
 
       const data = await response.json();
 
@@ -62,122 +60,121 @@ export default function ForgotPasswordPage() {
       setNewPassword('');
       setConfirmPassword('');
 
-      setTimeout(() => router.push('/signin'), 3000); // Redirect to login page
+      setTimeout(() => router.push('/signin'), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
-      console.error('Forgot password error:', err);
+      console.error('Reset password error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Reset Password
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter the OTP/token sent to your email and set a new password.
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <main className="flex-grow container mx-auto px-6 py-8">
+        <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
+          <h1 className="text-3xl font-bold mb-4" style={{ color: '#008080' }}>Reset Your Password</h1>
+          <p className="text-gray-700 mb-6">
+            Enter the token sent to your email and your new password.
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-            <div className="flex">
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+              <p>{error}</p>
             </div>
-          </div>
-        )}
+          )}
 
-        {success ? (
-          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
-            <div className="flex">
-              <div className="ml-3">
-                <p className="text-sm text-green-700">
-                  Password reset successfully! Redirecting to login...
-                </p>
-              </div>
+          {success ? (
+            <div className="mb-4 p-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+              <p>Password reset successful! Redirecting to login...</p>
             </div>
-          </div>
-        ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="rounded-md shadow-sm space-y-4">
+          ) : (
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="token" className="sr-only">Token</label>
+                <label htmlFor="token" className="block text-sm font-medium text-gray-700">Token</label>
                 <input
+                  type="text"
                   id="token"
                   name="token"
-                  type="text"
-                  required
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Enter OTP/Token"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                  placeholder="Enter your token"
+                  required
                 />
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="sr-only">New Password</label>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">New Password</label>
                 <input
+                  type="password"
                   id="newPassword"
                   name="newPassword"
-                  type="password"
-                  required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                   placeholder="New Password"
                   minLength={8}
+                  required
                 />
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="sr-only">Confirm New Password</label>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
                 <input
+                  type="password"
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
-                  required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Confirm New Password"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                  placeholder="Confirm Password"
+                  required
                 />
               </div>
-            </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50"
+                  style={{ backgroundColor: '#008080' }}
+                >
+                  {isLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Remember your password?{' '}
+              <Link 
+                href="/signin" 
+                className="font-medium text-teal-600 hover:text-teal-500"
+                style={{ color: '#008080' }}
               >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Resetting...
-                  </>
-                ) : 'Reset Password'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="text-center text-sm">
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            Back to Login
-          </Link>
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <footer className="bg-white shadow-md mt-8">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-700">
+              <p>Contact Details: <a href="mailto:nemr22ad06@emamit" className="hover:text-teal-800" style={{ color: '#008080' }}>nemr22ad06@emamit</a> | <a href="tel:911-9743282090" className="hover:text-teal-800" style={{ color: '#008080' }}>911-9743282090</a></p>
+              <p>AMDS 2025 All rights reserved</p>
+            </div>
+            <div className="flex space-x-4">
+              <a href="#" className="text-gray-400 hover:text-teal-800">Terms & Conditions</a>
+              <a href="#" className="text-gray-400 hover:text-teal-800">Privacy Policy</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
-
-// Reset password works but need to separate it from change password
