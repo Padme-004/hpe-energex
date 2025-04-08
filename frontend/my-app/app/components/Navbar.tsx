@@ -99,7 +99,7 @@ export default function Navbar() {
           {token ? (
             <>
               <Link
-                href={isAdmin ? "/user-dashboard" : "/contact"}
+                href={isAdmin ? "/user-dashboard" : "/device-dashboard"}
                 className="text-white hover:text-gray-300 text-xl"
               >
                 {isAdmin ? 'User Dashboard' : 'Dashboard'}

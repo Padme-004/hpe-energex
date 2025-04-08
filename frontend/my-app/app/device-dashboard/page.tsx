@@ -2,23 +2,25 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-interface User {
-  userId: number;
-  email: string;
-  anonymousName: string;
-  profileStatus: string;
+interface Device {
+  deviceId: number;
+  deviceName: string;
+  deviceType: string;
+  status: string;
+  powerUsage: number;
+  houseId: number;
 }
 
-export default function UserDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
+export default function DeviceDashboard() {
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { token, logout } = useAuth();
 
-  const fetchUsers = async () => {
+  const fetchDevices = async () => {
     try {
-      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/all', {
+      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/devices', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -36,29 +38,28 @@ export default function UserDashboard() {
       }
 
       const data = await response.json();
-      setUsers(data.content);
+      setDevices(data.content || data); // Handle both {content: [...]} and direct array responses
     } catch (err: any) {
-      console.error('Failed to fetch users:', err);
-      setError(err.message || 'Failed to load users.');
+      console.error('Failed to fetch devices:', err);
+      setError(err.message || 'Failed to load devices.');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (userId: number, newStatus: string) => {
+  const updateDeviceStatus = async (deviceId: number, newStatus: string) => {
     try {
       setError(null);
       setSuccess(null);
       
-      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/profile-status', {
-        method: 'PUT', // Changed from POST to PUT
+      const response = await fetch(`https://energy-optimisation-backend.onrender.com/api/devices/${deviceId}/status`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          userId,
-          profileStatus: newStatus 
+          status: newStatus 
         }),
       });
 
@@ -69,22 +70,22 @@ export default function UserDashboard() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
+        throw new Error(errorData.message || 'Failed to update device status');
       }
 
-      setUsers(users.map(user => 
-        user.userId === userId ? { ...user, profileStatus: newStatus } : user
+      setDevices(devices.map(device => 
+        device.deviceId === deviceId ? { ...device, status: newStatus } : device
       ));
-      setSuccess(`Status updated to ${newStatus} for user ${userId}`);
+      setSuccess(`Device ${deviceId} status updated to ${newStatus}`);
     } catch (err: any) {
       console.error('Update error:', err);
-      setError(err.message || 'Failed to update status. Please check your permissions.');
+      setError(err.message || 'Failed to update device status.');
     }
   };
 
   useEffect(() => {
     if (token) {
-      fetchUsers();
+      fetchDevices();
     }
   }, [token]);
 
@@ -93,7 +94,7 @@ export default function UserDashboard() {
       <main className="flex-grow container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
           <div className="text-center py-8">
-            <p className="text-gray-700">Loading users...</p>
+            <p className="text-gray-700">Loading devices...</p>
           </div>
         </div>
       </main>
@@ -110,7 +111,7 @@ export default function UserDashboard() {
           <button 
             onClick={() => {
               setError(null);
-              fetchUsers();
+              fetchDevices();
             }}
             className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
           >
@@ -125,7 +126,7 @@ export default function UserDashboard() {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <main className="flex-grow container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold mb-6" style={{ color: '#008080' }}>User Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-6" style={{ color: '#008080' }}>Device Dashboard</h1>
           
           {success && (
             <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
@@ -137,37 +138,43 @@ export default function UserDashboard() {
             <table className="min-w-full border border-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">User ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Device ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Power Usage (W)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">House ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user.userId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{user.userId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{user.anonymousName}</td>
+                {devices.map((device) => (
+                  <tr key={device.deviceId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{device.deviceId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{device.deviceName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{device.deviceType}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{device.powerUsage}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{device.houseId}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.profileStatus === 'ACTIVE' 
+                        device.status === 'ON' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {user.profileStatus}
+                        {device.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">
-                      <select
-                        value={user.profileStatus}
-                        onChange={(e) => updateStatus(user.userId, e.target.value)}
-                        className="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      <button
+                        onClick={() => updateDeviceStatus(device.deviceId, device.status === 'ON' ? 'OFF' : 'ON')}
+                        className={`px-3 py-1 rounded text-white text-sm ${
+                          device.status === 'ON' 
+                            ? 'bg-red-600 hover:bg-red-700' 
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
                       >
-                        <option value="ACTIVE">ACTIVE</option>
-                        <option value="INACTIVE">INACTIVE</option>
-                      </select>
+                        {device.status === 'ON' ? 'Turn OFF' : 'Turn ON'}
+                      </button>
                     </td>
                   </tr>
                 ))}
