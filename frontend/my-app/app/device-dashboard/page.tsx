@@ -278,7 +278,10 @@ export default function DeviceDashboard() {
   const handleAddDeviceClick = () => {
     router.push('/add-device'); // Replace with your actual route
   };
-
+  const handleRemoveDeviceClick = () => {
+    router.push('/remove-device');
+  };
+  
   useEffect(() => {
     if (token) {
       fetchDevices();
@@ -380,14 +383,20 @@ export default function DeviceDashboard() {
             </table>
             
             {/* Add Device Button */}
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={handleAddDeviceClick}
-                className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
-              >
-                + Add Device
-              </button>
-            </div>
+            <div className="mt-6 flex justify-end space-x-4">
+  <button
+    onClick={handleAddDeviceClick}
+    className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+  >
+    + Add Device
+  </button>
+  <button
+    onClick={handleRemoveDeviceClick} // Make sure you have this handler
+    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+  >
+    - Remove Device
+  </button>
+</div>
           </div>
         </div>
       </main>
