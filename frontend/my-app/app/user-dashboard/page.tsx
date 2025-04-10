@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation'; // Corrected import
 
 interface User {
   userId: number;
@@ -15,6 +16,12 @@ export default function UserDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { token, logout } = useAuth();
+  const router = useRouter(); // Correct initialization
+
+  // Navigation function
+  const navigateToHomeDashboard = () => {
+    router.push('/home-dashboard');
+  };
 
   const fetchUsers = async () => {
     try {
@@ -51,7 +58,7 @@ export default function UserDashboard() {
       setSuccess(null);
       
       const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/profile-status', {
-        method: 'PUT', // Changed from POST to PUT
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -173,6 +180,14 @@ export default function UserDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={navigateToHomeDashboard}
+              className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-lg font-medium shadow-md transition duration-200"
+            >
+              Home Dashboard
+            </button>
           </div>
         </div>
       </main>

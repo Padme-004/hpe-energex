@@ -102,7 +102,7 @@ export default function Navbar() {
                 href={isAdmin ? "/user-dashboard" : "/device-dashboard"}
                 className="text-white hover:text-gray-300 text-xl"
               >
-                {isAdmin ? 'User Dashboard' : 'Dashboard'}
+                {isAdmin ? 'Dashboards' : 'Dashboard'}
               </Link>
               <Link href="/chat" className="text-white hover:text-gray-300 text-xl">Chat</Link>
               <button 
