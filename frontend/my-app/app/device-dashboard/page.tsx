@@ -284,6 +284,9 @@ export default function DeviceDashboard() {
   const handleDetailDeviceClick = () =>{
     router.push('/device-detail');
   };
+  const handleUpdateDeviceClick = () =>{
+    router.push('/update-device');
+  };
 
   useEffect(() => {
     if (token) {
@@ -387,6 +390,7 @@ export default function DeviceDashboard() {
             
             {/* Add Device Button */}
             <div className="mt-6 flex justify-end space-x-4">
+  
   <button
     onClick={handleAddDeviceClick}
     className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
@@ -404,6 +408,12 @@ export default function DeviceDashboard() {
     className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
   >
     - Remove Device
+  </button>
+  <button
+    onClick={handleUpdateDeviceClick}
+    className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+  >
+    Update Device
   </button>
 </div>
           </div>

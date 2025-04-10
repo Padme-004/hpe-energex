@@ -162,32 +162,29 @@ export default function DeviceDetailsPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Device ID:</span>
-                    <span className="font-medium">{device.deviceId}</span>
+                    <span className="font-medium text-black">{device.deviceId}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Name:</span>
-                    <span className="font-medium">{device.deviceName}</span>
+                    <span className="font-medium text-black">{device.deviceName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Type:</span>
-                    <span className="font-medium capitalize">{device.deviceType.toLowerCase()}</span>
+                    <span className="font-medium capitalize text-black">{device.deviceType.toLowerCase()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Power Rating:</span>
-                    <span className="font-medium">{device.powerRating}</span>
+                    <span className="font-medium text-black">{device.powerRating}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Location:</span>
-                    <span className="font-medium capitalize">{device.location.toLowerCase()}</span>
+                    <span className="font-medium capitalize text-black">{device.location.toLowerCase()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">House ID:</span>
-                    <span className="font-medium">{device.houseId}</span>
+                    <span className="font-medium text-black">{device.houseId}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">User ID:</span>
-                    <span className="font-medium">{device.userId}</span>
-                  </div>
+                  
                 </div>
               </div>
             )}
