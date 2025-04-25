@@ -1,5 +1,5 @@
 // 'use client';
-// import React, { useEffect, useState, useCallback } from 'react';
+// import React, { useEffect, useState, useCallback, useRef } from 'react';
 // import { useRouter } from 'next/navigation';
 // import { jwtDecode } from 'jwt-decode';
 
@@ -7,9 +7,13 @@
 //   deviceId: number;
 //   deviceName: string;
 //   deviceType: string;
-//   status: string;
-//   powerUsage: number;
-//   houseId: number;
+//   status?: string;  // Renamed from the SSE data
+//   powerUsage?: number;  // Renamed from the SSE data
+//   powerRating?: string; // From SSE data
+//   location?: string;    // From SSE data
+//   on?: boolean;         // From SSE data
+//   turnedOnAt?: string;  // From SSE data
+//   houseId?: number;
 //   isUpdating?: boolean;
 // }
 
@@ -25,13 +29,16 @@
 //   const [loading, setLoading] = useState(true);
 //   const [success, setSuccess] = useState<string | null>(null);
 //   const [error, setError] = useState<string | null>(null);
-//   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+//   // Use ref for the EventSource to prevent re-renders
+//   const eventSourceRef = useRef<EventSource | null>(null);
 //   const [token, setToken] = useState<string | null>(null);
 //   const [userInfo, setUserInfo] = useState<{
 //     userId: number;
 //     role: string;
 //     houseId: number;
 //   } | null>(null);
+//   const reconnectTimeoutRef = useRef<number | null>(null);
+//   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
 
 //   const router = useRouter();
 
@@ -59,6 +66,20 @@
 //         role: decoded.role,
 //         houseId: decoded.houseId
 //       });
+
+//       // Try to load saved devices while waiting for API
+//       const savedDevices = localStorage.getItem(`devicesList_${decoded.houseId}`);
+//       if (savedDevices) {
+//         try {
+//           const parsedDevices = JSON.parse(savedDevices);
+//           setDevices(parsedDevices.map((device: Device) => ({
+//             ...device,
+//             isUpdating: false
+//           })));
+//         } catch (err) {
+//           console.error('Error parsing saved devices:', err);
+//         }
+//       }
 //     } catch (err) {
 //       console.error('Error decoding token:', err);
 //       localStorage.removeItem('jwt');
@@ -66,7 +87,7 @@
 //     }
 //   }, [router]);
 
-//   // Fetch devices
+//   // Fetch devices - this function won't change on every render
 //   const fetchDevices = useCallback(async () => {
 //     if (!userInfo?.houseId || !token) return;
 
@@ -94,10 +115,17 @@
 //       }
 
 //       const data = await response.json();
-//       setDevices((data.content || data).map((device: Device) => ({
+//       const devicesList = (data.content || data).map((device: Device) => ({
 //         ...device,
+//         status: device.on ? 'ON' : 'OFF', // Map 'on' to 'status'
+//         powerUsage: parseInt(device.powerRating?.replace('W', '') || '0', 10), // Extract wattage
 //         isUpdating: false
-//       })));
+//       }));
+      
+//       setDevices(devicesList);
+      
+//       // Save devices to localStorage with house ID as part of the key
+//       localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(devicesList));
 //     } catch (err) {
 //       console.error('Failed to fetch devices:', err);
 //       setError('Failed to load devices. Please try again.');
@@ -106,137 +134,300 @@
 //     }
 //   }, [token, userInfo?.houseId, router]);
 
-//   // Set up SSE with corrected endpoint
-//   const setupEventSource = useCallback(() => {
-//     if (!token || !userInfo?.houseId) return;
+//   // Convert SSE device format to our component device format
+//   const normalizeDeviceData = (sseDevice: any): Device => {
+//     return {
+//       ...sseDevice,
+//       status: sseDevice.on ? 'ON' : 'OFF',
+//       powerUsage: parseInt(sseDevice.powerRating?.replace('W', '') || '0', 10),
+//       isUpdating: false
+//     };
+//   };
 
-//     // Close existing connection if any
-//     if (eventSource) {
-//       eventSource.close();
+//   // Setup SSE connection with proper event type handling
+//   const setupEventSource = useCallback(() => {
+//     // Clear any existing reconnect timeout
+//     if (reconnectTimeoutRef.current) {
+//       clearTimeout(reconnectTimeoutRef.current);
+//       reconnectTimeoutRef.current = null;
 //     }
 
-//     // Use the correct endpoint with houseId from token and token as parameter
+//     // Check if we have the required data and no existing connection
+//     if (!token || !userInfo?.houseId) return;
+    
+//     // Close existing connection if any
+//     if (eventSourceRef.current) {
+//       console.log('Closing existing SSE connection');
+//       eventSourceRef.current.close();
+//       eventSourceRef.current = null;
+//     }
+
+//     setConnectionStatus('connecting');
+    
+//     // Create the URL with token and houseId
 //     const url = `https://energy-optimisation-backend.onrender.com/api/device-status/house/${userInfo.houseId}/subscribe?token=${encodeURIComponent(token)}`;
+    
+//     console.log('Setting up new SSE connection');
 //     const newEventSource = new EventSource(url);
 
+//     // Set up event-specific handlers
+//     newEventSource.addEventListener('INIT', (event) => {
+//       try {
+//         console.log('SSE INIT event received:', event.data);
+//         const deviceList = JSON.parse(event.data);
+        
+//         if (Array.isArray(deviceList)) {
+//           const normalizedDevices = deviceList.map(normalizeDeviceData);
+          
+//           setDevices(normalizedDevices);
+          
+//           // Save updated devices to localStorage
+//           if (userInfo?.houseId) {
+//             localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
+//           }
+          
+//           setSuccess('Initial device data received');
+//           setTimeout(() => setSuccess(null), 3000);
+//         }
+//       } catch (err) {
+//         console.error('Error parsing INIT event data:', err, event.data);
+//       }
+//     });
+
+//     newEventSource.addEventListener('DEVICE_UPDATE', (event) => {
+//       try {
+//         console.log('SSE DEVICE_UPDATE event received:', event.data);
+//         const deviceList = JSON.parse(event.data);
+        
+//         if (Array.isArray(deviceList)) {
+//           const normalizedDevices = deviceList.map(normalizeDeviceData);
+          
+//           setDevices(normalizedDevices);
+          
+//           // Save updated devices to localStorage
+//           if (userInfo?.houseId) {
+//             localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
+//           }
+          
+//           setSuccess('Device status updated');
+//           setTimeout(() => setSuccess(null), 3000);
+//         }
+//       } catch (err) {
+//         console.error('Error parsing DEVICE_UPDATE event data:', err, event.data);
+//       }
+//     });
+
+//     // Set up generic message handler as fallback
 //     newEventSource.onmessage = (event) => {
 //       try {
-//         const updatedDevice = JSON.parse(event.data);
-//         setDevices(prevDevices =>
-//           prevDevices.map(device =>
-//             device.deviceId === updatedDevice.deviceId 
-//               ? { ...updatedDevice, isUpdating: false }
-//               : device
-//           )
-//         );
+//         console.log('SSE generic message received:', event.data);
+//         // This is a fallback in case we receive a message without a specific event type
+//         const data = JSON.parse(event.data);
+        
+//         if (Array.isArray(data)) {
+//           // Handle array of devices
+//           const normalizedDevices = data.map(normalizeDeviceData);
+//           setDevices(normalizedDevices);
+          
+//           // Save updated devices to localStorage
+//           if (userInfo?.houseId) {
+//             localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
+//           }
+//         } else if (data && data.deviceId) {
+//           // Handle single device update
+//           setDevices(prevDevices => {
+//             const deviceExists = prevDevices.some(device => device.deviceId === data.deviceId);
+//             const normalizedDevice = normalizeDeviceData(data);
+            
+//             let updatedDevices;
+//             if (deviceExists) {
+//               // Update existing device
+//               updatedDevices = prevDevices.map(device =>
+//                 device.deviceId === data.deviceId 
+//                   ? { ...device, ...normalizedDevice }
+//                   : device
+//               );
+//             } else {
+//               // Add new device if it doesn't exist
+//               updatedDevices = [...prevDevices, normalizedDevice];
+//             }
+            
+//             // Save updated devices to localStorage
+//             if (userInfo?.houseId) {
+//               localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
+//             }
+            
+//             return updatedDevices;
+//           });
+//         }
+        
+//         setSuccess('Device data updated');
+//         setTimeout(() => setSuccess(null), 3000);
 //       } catch (err) {
-//         console.error('Error parsing SSE data:', err);
+//         console.error('Error parsing generic SSE data:', err, event.data);
 //       }
 //     };
 
+//     // Set up open handler
+//     newEventSource.onopen = () => {
+//       console.log('SSE connection opened');
+//       setConnectionStatus('connected');
+//     };
+
+//     // Set up error handler with better reconnection logic
 //     newEventSource.onerror = (err) => {
 //       console.error('SSE connection error:', err);
+//       setConnectionStatus('disconnected');
+      
+//       // Close the connection
 //       newEventSource.close();
-//       // Attempt to reconnect after a delay
-//       setTimeout(setupEventSource, 5000);
+      
+//       // Only attempt reconnect if not unmounted
+//       reconnectTimeoutRef.current = window.setTimeout(() => {
+//         console.log('Attempting to reconnect SSE');
+//         setupEventSource();
+//       }, 5000) as unknown as number;
 //     };
 
-//     setEventSource(newEventSource);
-
-//     return () => {
-//       newEventSource.close();
-//     };
+//     // Store the event source in the ref
+//     eventSourceRef.current = newEventSource;
 //   }, [token, userInfo?.houseId]);
 
-//   // Toggle device status with optimistic UI update
-//   // Modify the toggleDeviceStatus function to include a timeout
-// const toggleDeviceStatus = async (deviceId: number) => {
-//   try {
-//     setSuccess(null);
-//     setError(null);
-    
-//     if (!token) {
-//       throw new Error('No authentication token found');
-//     }
-
-//     // Optimistically update the UI first
-//     setDevices(prevDevices =>
-//       prevDevices.map(device =>
-//         device.deviceId === deviceId 
-//           ? { 
-//               ...device, 
-//               status: device.status === 'ON' ? 'OFF' : 'ON',
-//               isUpdating: true
-//             } 
-//           : device
-//       )
-//     );
-
-//     const response = await fetch(
-//       `https://energy-optimisation-backend.onrender.com/api/device-status/${deviceId}/toggle`,
-//       {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           'Authorization': `Bearer ${token}`
-//         }
+//   // Toggle device status
+//   const toggleDeviceStatus = async (deviceId: number) => {
+//     try {
+//       setSuccess(null);
+//       setError(null);
+      
+//       if (!token) {
+//         throw new Error('No authentication token found');
 //       }
-//     );
 
-//     if (response.status === 401) {
-//       localStorage.removeItem('jwt');
-//       router.push('/signin');
-//       return;
-//     }
-
-//     if (!response.ok) {
-//       const errorData = await response.json();
-//       throw new Error(errorData.message || 'Failed to toggle device status');
-//     }
-
-//     // Add a timeout to reset the updating state if SSE doesn't respond within 5 seconds
-//     setTimeout(() => {
-//       setDevices(prevDevices =>
-//         prevDevices.map(device =>
-//           device.deviceId === deviceId && device.isUpdating
-//             ? { ...device, isUpdating: false }
+//       // Optimistically update the UI first
+//       setDevices(prevDevices => {
+//         const updatedDevices = prevDevices.map(device =>
+//           device.deviceId === deviceId 
+//             ? { 
+//                 ...device, 
+//                 status: device.status === 'ON' ? 'OFF' : 'ON',
+//                 isUpdating: true
+//               } 
 //             : device
-//         )
-//       );
-//     }, 5000);
+//         );
+        
+//         // Save updated devices to localStorage
+//         if (userInfo?.houseId) {
+//           localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
+//         }
+        
+//         return updatedDevices;
+//       });
 
-//     setSuccess(`Device status toggled successfully`);
-//   } catch (err) {
-//     console.error('Toggle error:', err);
-//     setError(err instanceof Error ? err.message : 'Failed to toggle device');
-//     // Reset the updating state and revert optimistic update on error
-//     setDevices(prevDevices =>
-//       prevDevices.map(device =>
-//         device.deviceId === deviceId
-//           ? { ...device, isUpdating: false } 
-//           : device
-//       )
-//     );
-//     fetchDevices();
-//   }
-// };
+//       const response = await fetch(
+//         `https://energy-optimisation-backend.onrender.com/api/device-status/${deviceId}/toggle`,
+//         {
+//           method: 'POST',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${token}`
+//           }
+//         }
+//       );
+
+//       if (response.status === 401) {
+//         localStorage.removeItem('jwt');
+//         router.push('/signin');
+//         return;
+//       }
+
+//       if (!response.ok) {
+//         const errorData = await response.json();
+//         throw new Error(errorData.message || 'Failed to toggle device status');
+//       }
+
+//       // Add a timeout to reset the updating state if SSE doesn't respond within 5 seconds
+//       setTimeout(() => {
+//         setDevices(prevDevices => {
+//           const updatedDevices = prevDevices.map(device =>
+//             device.deviceId === deviceId && device.isUpdating
+//               ? { ...device, isUpdating: false }
+//               : device
+//           );
+          
+//           // Save updated devices to localStorage
+//           if (userInfo?.houseId) {
+//             localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
+//           }
+          
+//           return updatedDevices;
+//         });
+//       }, 5000);
+
+//       setSuccess(`Device status toggled successfully`);
+//     } catch (err) {
+//       console.error('Toggle error:', err);
+//       setError(err instanceof Error ? err.message : 'Failed to toggle device');
+//       // Reset the updating state and revert optimistic update on error
+//       setDevices(prevDevices => {
+//         const updatedDevices = prevDevices.map(device =>
+//           device.deviceId === deviceId
+//             ? { 
+//                 ...device, 
+//                 status: device.status === 'ON' ? 'OFF' : 'ON', // Revert the status
+//                 isUpdating: false 
+//               } 
+//             : device
+//         );
+        
+//         // Save updated devices to localStorage
+//         if (userInfo?.houseId) {
+//           localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
+//         }
+        
+//         return updatedDevices;
+//       });
+//     }
+//   };
+
 //   // Navigation handlers
 //   const handleAddDeviceClick = () => router.push('/add-device');
 //   const handleRemoveDeviceClick = () => router.push('/remove-device');
 //   const handleDetailDeviceClick = () => router.push('/device-detail');
 //   const handleUpdateDeviceClick = () => router.push('/update-device');
 
-//   // Main effect to initialize data and SSE
+//   // Force refresh devices button
+//   const handleRefreshDevices = () => {
+//     fetchDevices();
+//   };
+
+//   // Main effect to initialize data and SSE - RUNS ONCE ON MOUNT
 //   useEffect(() => {
-//     if (token && userInfo?.houseId) {
+//     let mounted = true;
+    
+//     // Initial data fetch when userInfo is available
+//     if (token && userInfo?.houseId && mounted) {
+//       console.log('Initial fetch and SSE setup');
 //       fetchDevices();
-//       const cleanup = setupEventSource();
-      
-//       return () => {
-//         if (cleanup) cleanup();
-//       };
+//       setupEventSource();
 //     }
-//   }, [token, userInfo?.houseId, fetchDevices, setupEventSource]);
+
+//     // Cleanup function
+//     return () => {
+//       mounted = false;
+      
+//       // Clear any reconnect timeouts
+//       if (reconnectTimeoutRef.current) {
+//         clearTimeout(reconnectTimeoutRef.current);
+//       }
+      
+//       // Close SSE connection
+//       if (eventSourceRef.current) {
+//         console.log('Closing SSE connection on unmount');
+//         eventSourceRef.current.close();
+//         eventSourceRef.current = null;
+//       }
+//     };
+//   }, [token, userInfo?.houseId, fetchDevices, setupEventSource]); // Added function dependencies
 
 //   if (!token || !userInfo) {
 //     return (
@@ -245,20 +436,6 @@
 //           <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
 //             <div className="text-center py-8">
 //               <p className="text-gray-700">Loading...</p>
-//             </div>
-//           </div>
-//         </main>
-//       </div>
-//     );
-//   }
-
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen bg-gray-100 flex flex-col">
-//         <main className="flex-grow container mx-auto px-6 py-8">
-//           <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
-//             <div className="text-center py-8">
-//               <p className="text-gray-700">Loading devices...</p>
 //             </div>
 //           </div>
 //         </main>
@@ -302,6 +479,51 @@
 //             </div>
 //           </div>
 
+//           <div className="flex items-center mb-4">
+//             <button
+//               onClick={handleRefreshDevices}
+//               className="mr-4 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm font-medium flex items-center"
+//             >
+//               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+//               </svg>
+//               Refresh Devices
+//             </button>
+//             <span className={`text-sm ${
+//               connectionStatus === 'connected' ? 'text-green-500' : 
+//               connectionStatus === 'connecting' ? 'text-orange-500' : 
+//               'text-red-500'
+//             } flex items-center`}>
+//               {connectionStatus === 'connected' && (
+//                 <>
+//                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+//                   Connected to updates
+//                 </>
+//               )}
+//               {connectionStatus === 'connecting' && (
+//                 <>
+//                   <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+//                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+//                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+//                   </svg>
+//                   Connecting...
+//                 </>
+//               )}
+//               {connectionStatus === 'disconnected' && (
+//                 <>
+//                   <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+//                   Disconnected from updates
+//                 </>
+//               )}
+//             </span>
+//           </div>
+
+//           {loading && (
+//             <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-6">
+//               <p className="text-blue-700">Loading device information...</p>
+//             </div>
+//           )}
+
 //           {success && (
 //             <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
 //               <p className="text-green-700">{success}</p>
@@ -327,6 +549,7 @@
 //                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Name</th>
 //                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Type</th>
 //                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Power Usage (W)</th>
+//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Location</th>
 //                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Status</th>
 //                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase border-b">Actions</th>
 //                   </tr>
@@ -337,13 +560,22 @@
 //                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.deviceId}</td>
 //                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.deviceName}</td>
 //                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.deviceType}</td>
-//                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.powerUsage}</td>
+//                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.powerUsage || 0}</td>
+//                       <td className="px-6 py-4 text-sm text-gray-900 border-b">{device.location || '-'}</td>
 //                       <td className="px-6 py-4 text-sm text-gray-900 border-b">
 //                         <span className={`px-2 py-1 rounded-full text-xs ${
 //                           device.status === 'ON' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
 //                         }`}>
 //                           {device.status}
 //                         </span>
+//                         {device.isUpdating && (
+//                           <span className="ml-2 inline-block">
+//                             <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+//                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+//                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+//                             </svg>
+//                           </span>
+//                         )}
 //                       </td>
 //                       <td className="px-6 py-4 text-sm text-gray-900 border-b">
 //                         <button
@@ -384,12 +616,12 @@ interface Device {
   deviceId: number;
   deviceName: string;
   deviceType: string;
-  status?: string;  // Renamed from the SSE data
-  powerUsage?: number;  // Renamed from the SSE data
-  powerRating?: string; // From SSE data
-  location?: string;    // From SSE data
-  on?: boolean;         // From SSE data
-  turnedOnAt?: string;  // From SSE data
+  status?: string;
+  powerUsage?: number;
+  powerRating?: string;
+  location?: string;
+  on?: boolean;
+  turnedOnAt?: string;
   houseId?: number;
   isUpdating?: boolean;
 }
@@ -401,12 +633,35 @@ interface DecodedToken {
   exp?: number;
 }
 
+const getDevicesStorageKey = (houseId: number) => `devicesList_${houseId}`;
+
+const getSavedDevices = (houseId: number): Device[] => {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const savedDevices = localStorage.getItem(getDevicesStorageKey(houseId));
+    return savedDevices ? JSON.parse(savedDevices) : [];
+  } catch (err) {
+    console.error('Error parsing saved devices:', err);
+    return [];
+  }
+};
+
+const saveDevicesToStorage = (houseId: number, devices: Device[]) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(getDevicesStorageKey(houseId), JSON.stringify(devices));
+  } catch (err) {
+    console.error('Error saving devices to localStorage:', err);
+  }
+};
+
 export default function DeviceDashboard() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Use ref for the EventSource to prevent re-renders
   const eventSourceRef = useRef<EventSource | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<{
@@ -416,12 +671,12 @@ export default function DeviceDashboard() {
   } | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   const router = useRouter();
 
-  // Initialize token and user info from localStorage
   useEffect(() => {
-    const jwtToken = localStorage.getItem('jwt');
+    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null;
     if (!jwtToken) {
       router.push('/signin');
       return;
@@ -431,31 +686,27 @@ export default function DeviceDashboard() {
     try {
       const decoded: DecodedToken = jwtDecode(jwtToken);
       
-      // Check if token is expired
       if (decoded.exp && decoded.exp * 1000 < Date.now()) {
         localStorage.removeItem('jwt');
         router.push('/signin');
         return;
       }
 
-      setUserInfo({
+      const userInfoData = {
         userId: decoded.userId,
         role: decoded.role,
         houseId: decoded.houseId
-      });
+      };
+      
+      setUserInfo(userInfoData);
 
-      // Try to load saved devices while waiting for API
-      const savedDevices = localStorage.getItem(`devicesList_${decoded.houseId}`);
-      if (savedDevices) {
-        try {
-          const parsedDevices = JSON.parse(savedDevices);
-          setDevices(parsedDevices.map((device: Device) => ({
-            ...device,
-            isUpdating: false
-          })));
-        } catch (err) {
-          console.error('Error parsing saved devices:', err);
-        }
+      const savedDevices = getSavedDevices(decoded.houseId);
+      if (savedDevices.length > 0) {
+        setDevices(savedDevices.map((device: Device) => ({
+          ...device,
+          isUpdating: false
+        })));
+        setInitialDataLoaded(true);
       }
     } catch (err) {
       console.error('Error decoding token:', err);
@@ -464,7 +715,6 @@ export default function DeviceDashboard() {
     }
   }, [router]);
 
-  // Fetch devices - this function won't change on every render
   const fetchDevices = useCallback(async () => {
     if (!userInfo?.houseId || !token) return;
 
@@ -494,24 +744,25 @@ export default function DeviceDashboard() {
       const data = await response.json();
       const devicesList = (data.content || data).map((device: Device) => ({
         ...device,
-        status: device.on ? 'ON' : 'OFF', // Map 'on' to 'status'
-        powerUsage: parseInt(device.powerRating?.replace('W', '') || '0', 10), // Extract wattage
+        status: device.on ? 'ON' : 'OFF',
+        powerUsage: parseInt(device.powerRating?.replace('W', '') || '0', 10),
         isUpdating: false
       }));
       
       setDevices(devicesList);
-      
-      // Save devices to localStorage with house ID as part of the key
-      localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(devicesList));
+      setInitialDataLoaded(true);
+      saveDevicesToStorage(userInfo.houseId, devicesList);
     } catch (err) {
       console.error('Failed to fetch devices:', err);
       setError('Failed to load devices. Please try again.');
+      if (devices.length > 0) {
+        setInitialDataLoaded(true);
+      }
     } finally {
       setLoading(false);
     }
-  }, [token, userInfo?.houseId, router]);
+  }, [token, userInfo?.houseId, router, devices.length]);
 
-  // Convert SSE device format to our component device format
   const normalizeDeviceData = (sseDevice: any): Device => {
     return {
       ...sseDevice,
@@ -521,48 +772,32 @@ export default function DeviceDashboard() {
     };
   };
 
-  // Setup SSE connection with proper event type handling
   const setupEventSource = useCallback(() => {
-    // Clear any existing reconnect timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
 
-    // Check if we have the required data and no existing connection
     if (!token || !userInfo?.houseId) return;
     
-    // Close existing connection if any
     if (eventSourceRef.current) {
-      console.log('Closing existing SSE connection');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
 
     setConnectionStatus('connecting');
     
-    // Create the URL with token and houseId
     const url = `https://energy-optimisation-backend.onrender.com/api/device-status/house/${userInfo.houseId}/subscribe?token=${encodeURIComponent(token)}`;
-    
-    console.log('Setting up new SSE connection');
     const newEventSource = new EventSource(url);
 
-    // Set up event-specific handlers
     newEventSource.addEventListener('INIT', (event) => {
       try {
-        console.log('SSE INIT event received:', event.data);
         const deviceList = JSON.parse(event.data);
-        
         if (Array.isArray(deviceList)) {
           const normalizedDevices = deviceList.map(normalizeDeviceData);
-          
           setDevices(normalizedDevices);
-          
-          // Save updated devices to localStorage
-          if (userInfo?.houseId) {
-            localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
-          }
-          
+          setInitialDataLoaded(true);
+          saveDevicesToStorage(userInfo.houseId, normalizedDevices);
           setSuccess('Initial device data received');
           setTimeout(() => setSuccess(null), 3000);
         }
@@ -573,71 +808,84 @@ export default function DeviceDashboard() {
 
     newEventSource.addEventListener('DEVICE_UPDATE', (event) => {
       try {
-        console.log('SSE DEVICE_UPDATE event received:', event.data);
-        const deviceList = JSON.parse(event.data);
+        const updatedData = JSON.parse(event.data);
         
-        if (Array.isArray(deviceList)) {
-          const normalizedDevices = deviceList.map(normalizeDeviceData);
-          
-          setDevices(normalizedDevices);
-          
-          // Save updated devices to localStorage
-          if (userInfo?.houseId) {
-            localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
-          }
-          
-          setSuccess('Device status updated');
-          setTimeout(() => setSuccess(null), 3000);
+        if (Array.isArray(updatedData)) {
+          const normalizedDevices = updatedData.map(normalizeDeviceData);
+          setDevices(prevDevices => {
+            const merged = normalizedDevices.map(newDevice => {
+              const existingDevice = prevDevices.find(dev => dev.deviceId === newDevice.deviceId);
+              return {
+                ...newDevice,
+                isUpdating: existingDevice?.isUpdating || false
+              };
+            });
+            saveDevicesToStorage(userInfo.houseId, merged);
+            return merged;
+          });
+        } else if (updatedData && updatedData.deviceId) {
+          const normalizedDevice = normalizeDeviceData(updatedData);
+          setDevices(prevDevices => {
+            let updatedDevices;
+            const deviceIndex = prevDevices.findIndex(device => device.deviceId === normalizedDevice.deviceId);
+            
+            if (deviceIndex >= 0) {
+              updatedDevices = [...prevDevices];
+              updatedDevices[deviceIndex] = {
+                ...updatedDevices[deviceIndex],
+                ...normalizedDevice,
+                isUpdating: false
+              };
+            } else {
+              updatedDevices = [...prevDevices, normalizedDevice];
+            }
+            saveDevicesToStorage(userInfo.houseId, updatedDevices);
+            return updatedDevices;
+          });
         }
+        setSuccess('Device status updated');
+        setTimeout(() => setSuccess(null), 3000);
       } catch (err) {
         console.error('Error parsing DEVICE_UPDATE event data:', err, event.data);
       }
     });
 
-    // Set up generic message handler as fallback
     newEventSource.onmessage = (event) => {
       try {
-        console.log('SSE generic message received:', event.data);
-        // This is a fallback in case we receive a message without a specific event type
         const data = JSON.parse(event.data);
-        
         if (Array.isArray(data)) {
-          // Handle array of devices
           const normalizedDevices = data.map(normalizeDeviceData);
-          setDevices(normalizedDevices);
-          
-          // Save updated devices to localStorage
-          if (userInfo?.houseId) {
-            localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(normalizedDevices));
-          }
-        } else if (data && data.deviceId) {
-          // Handle single device update
           setDevices(prevDevices => {
-            const deviceExists = prevDevices.some(device => device.deviceId === data.deviceId);
-            const normalizedDevice = normalizeDeviceData(data);
-            
+            const merged = normalizedDevices.map(newDevice => {
+              const existingDevice = prevDevices.find(dev => dev.deviceId === newDevice.deviceId);
+              return {
+                ...newDevice,
+                isUpdating: existingDevice?.isUpdating || false
+              };
+            });
+            saveDevicesToStorage(userInfo.houseId, merged);
+            return merged;
+          });
+        } else if (data && data.deviceId) {
+          const normalizedDevice = normalizeDeviceData(data);
+          setDevices(prevDevices => {
             let updatedDevices;
-            if (deviceExists) {
-              // Update existing device
-              updatedDevices = prevDevices.map(device =>
-                device.deviceId === data.deviceId 
-                  ? { ...device, ...normalizedDevice }
-                  : device
-              );
+            const deviceIndex = prevDevices.findIndex(device => device.deviceId === normalizedDevice.deviceId);
+            
+            if (deviceIndex >= 0) {
+              updatedDevices = [...prevDevices];
+              updatedDevices[deviceIndex] = {
+                ...updatedDevices[deviceIndex],
+                ...normalizedDevice,
+                isUpdating: false
+              };
             } else {
-              // Add new device if it doesn't exist
               updatedDevices = [...prevDevices, normalizedDevice];
             }
-            
-            // Save updated devices to localStorage
-            if (userInfo?.houseId) {
-              localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
-            }
-            
+            saveDevicesToStorage(userInfo.houseId, updatedDevices);
             return updatedDevices;
           });
         }
-        
         setSuccess('Device data updated');
         setTimeout(() => setSuccess(null), 3000);
       } catch (err) {
@@ -645,33 +893,27 @@ export default function DeviceDashboard() {
       }
     };
 
-    // Set up open handler
     newEventSource.onopen = () => {
-      console.log('SSE connection opened');
       setConnectionStatus('connected');
     };
 
-    // Set up error handler with better reconnection logic
     newEventSource.onerror = (err) => {
       console.error('SSE connection error:', err);
       setConnectionStatus('disconnected');
-      
-      // Close the connection
       newEventSource.close();
       
-      // Only attempt reconnect if not unmounted
+      const reconnectDelay = (reconnectTimeoutRef.current ? 10000 : 5000);
       reconnectTimeoutRef.current = window.setTimeout(() => {
-        console.log('Attempting to reconnect SSE');
         setupEventSource();
-      }, 5000) as unknown as number;
+      }, reconnectDelay) as unknown as number;
     };
 
-    // Store the event source in the ref
     eventSourceRef.current = newEventSource;
   }, [token, userInfo?.houseId]);
 
-  // Toggle device status
   const toggleDeviceStatus = async (deviceId: number) => {
+    if (!userInfo?.houseId) return;
+    
     try {
       setSuccess(null);
       setError(null);
@@ -680,23 +922,18 @@ export default function DeviceDashboard() {
         throw new Error('No authentication token found');
       }
 
-      // Optimistically update the UI first
       setDevices(prevDevices => {
         const updatedDevices = prevDevices.map(device =>
           device.deviceId === deviceId 
             ? { 
                 ...device, 
                 status: device.status === 'ON' ? 'OFF' : 'ON',
+                on: device.status !== 'ON',
                 isUpdating: true
               } 
             : device
         );
-        
-        // Save updated devices to localStorage
-        if (userInfo?.houseId) {
-          localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
-        }
-        
+        saveDevicesToStorage(userInfo.houseId, updatedDevices);
         return updatedDevices;
       });
 
@@ -722,7 +959,6 @@ export default function DeviceDashboard() {
         throw new Error(errorData.message || 'Failed to toggle device status');
       }
 
-      // Add a timeout to reset the updating state if SSE doesn't respond within 5 seconds
       setTimeout(() => {
         setDevices(prevDevices => {
           const updatedDevices = prevDevices.map(device =>
@@ -730,12 +966,7 @@ export default function DeviceDashboard() {
               ? { ...device, isUpdating: false }
               : device
           );
-          
-          // Save updated devices to localStorage
-          if (userInfo?.houseId) {
-            localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
-          }
-          
+          saveDevicesToStorage(userInfo.houseId, updatedDevices);
           return updatedDevices;
         });
       }, 5000);
@@ -744,67 +975,70 @@ export default function DeviceDashboard() {
     } catch (err) {
       console.error('Toggle error:', err);
       setError(err instanceof Error ? err.message : 'Failed to toggle device');
-      // Reset the updating state and revert optimistic update on error
+      
       setDevices(prevDevices => {
         const updatedDevices = prevDevices.map(device =>
           device.deviceId === deviceId
             ? { 
                 ...device, 
-                status: device.status === 'ON' ? 'OFF' : 'ON', // Revert the status
+                status: device.status === 'ON' ? 'OFF' : 'ON',
+                on: device.status === 'ON',
                 isUpdating: false 
               } 
             : device
         );
-        
-        // Save updated devices to localStorage
-        if (userInfo?.houseId) {
-          localStorage.setItem(`devicesList_${userInfo.houseId}`, JSON.stringify(updatedDevices));
-        }
-        
+        saveDevicesToStorage(userInfo.houseId, updatedDevices);
         return updatedDevices;
       });
     }
   };
 
-  // Navigation handlers
   const handleAddDeviceClick = () => router.push('/add-device');
   const handleRemoveDeviceClick = () => router.push('/remove-device');
   const handleDetailDeviceClick = () => router.push('/device-detail');
   const handleUpdateDeviceClick = () => router.push('/update-device');
 
-  // Force refresh devices button
   const handleRefreshDevices = () => {
     fetchDevices();
+    if (connectionStatus === 'disconnected') {
+      setupEventSource();
+    }
   };
 
-  // Main effect to initialize data and SSE - RUNS ONCE ON MOUNT
   useEffect(() => {
     let mounted = true;
     
-    // Initial data fetch when userInfo is available
     if (token && userInfo?.houseId && mounted) {
-      console.log('Initial fetch and SSE setup');
-      fetchDevices();
+      if (devices.length === 0) {
+        fetchDevices();
+      }
       setupEventSource();
     }
 
-    // Cleanup function
     return () => {
       mounted = false;
-      
-      // Clear any reconnect timeouts
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      
-      // Close SSE connection
       if (eventSourceRef.current) {
-        console.log('Closing SSE connection on unmount');
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
     };
-  }, [token, userInfo?.houseId, fetchDevices, setupEventSource]); // Added function dependencies
+  }, [token, userInfo?.houseId, fetchDevices, setupEventSource, devices.length]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (connectionStatus !== 'connected' && token && userInfo?.houseId) {
+        setupEventSource();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [connectionStatus, token, userInfo?.houseId, setupEventSource]);
 
   if (!token || !userInfo) {
     return (
@@ -819,6 +1053,8 @@ export default function DeviceDashboard() {
       </div>
     );
   }
+
+  const isInitialLoading = loading && !initialDataLoaded && devices.length === 0;
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -857,15 +1093,7 @@ export default function DeviceDashboard() {
           </div>
 
           <div className="flex items-center mb-4">
-            <button
-              onClick={handleRefreshDevices}
-              className="mr-4 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm font-medium flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh Devices
-            </button>
+            
             <span className={`text-sm ${
               connectionStatus === 'connected' ? 'text-green-500' : 
               connectionStatus === 'connecting' ? 'text-orange-500' : 
@@ -895,11 +1123,13 @@ export default function DeviceDashboard() {
             </span>
           </div>
 
-          {loading && (
+          {isInitialLoading && (
             <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-6">
               <p className="text-blue-700">Loading device information...</p>
             </div>
           )}
+
+        
 
           {success && (
             <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
@@ -984,5 +1214,3 @@ export default function DeviceDashboard() {
     </div>
   );
 }
-
-
