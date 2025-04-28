@@ -268,8 +268,6 @@ export default function Home() {
             </h3>
             <p className="text-lg text-gray-700 mb-8">
               Guiding you on your global energy success journey through customized & personalized consumption and prediction algorithms.
-            </p>
-            <p className="text-lg text-gray-700 mb-8">
               We're committed to providing you with expert guidance, proven strategies & personalized approach.
             </p>
             <div>
