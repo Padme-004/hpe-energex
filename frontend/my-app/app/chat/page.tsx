@@ -1,17 +1,33 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
+import { useRouter } from "next/navigation";
 
 const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<{ text: string; sender: "user" | "bot" }[]>([]);
+  const [messages, setMessages] = useState<
+    { text: string; sender: "user" | "bot" }[]
+  >([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // Get JWT token from localStorage on component mount
+  useEffect(() => {
+    const jwtToken = localStorage.getItem("jwt");
+    if (!jwtToken) {
+      router.push("/signin");
+      return;
+    }
+    setToken(jwtToken);
+  }, [router]);
 
   // Add keyframes animation using useEffect
   useEffect(() => {
     // Create a style element
-    const styleElement = document.createElement('style');
-    
+    const styleElement = document.createElement("style");
+
     // Define the keyframes animation
     styleElement.textContent = `
       @keyframes bounce {
@@ -28,49 +44,92 @@ const ChatInterface: React.FC = () => {
         animation-delay: calc(0.16s * var(--dot-index));
       }
     `;
-    
+
     // Append the style element to the document head
     document.head.appendChild(styleElement);
-    
+
     // Cleanup function to remove the style element when component unmounts
     return () => {
       document.head.removeChild(styleElement);
     };
   }, []);
 
+  // Auto-scroll to the bottom whenever messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
   const handleSend = async () => {
     if (inputText.trim()) {
+      if (!token) {
+        // If somehow token is not available, redirect to login
+        router.push("/signin");
+        return;
+      }
+
       const userMessage = { text: inputText, sender: "user" as const };
       setMessages((prev) => [...prev, userMessage]);
       setInputText("");
       setIsLoading(true);
 
       try {
-        const response = await fetch("https://energy-optimisation-backend.onrender.com/api/forward", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: inputText }),
-        });
+        const response = await fetch(
+          "https://energy-optimisation-backend.onrender.com/api/forward",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ query: inputText }),
+          }
+        );
 
-        setIsLoading(false);
+        if (response.status === 401) {
+          // Handle unauthorized access (expired token)
+          localStorage.removeItem("jwt");
+          router.push("/signin");
+          return;
+        }
 
-        if (!response.ok) throw new Error("Network response was not ok");
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `Server responded with ${response.status}: ${errorText}`
+          );
+          throw new Error(`Server error: ${response.status}`);
+        }
 
         const data = await response.json();
         const botMessage = { text: data.response, sender: "bot" as const };
         setMessages((prev) => [...prev, botMessage]);
       } catch (error) {
         console.error("Error fetching AI response:", error);
-        setIsLoading(false);
         setMessages((prev) => [
           ...prev,
-          { text: "Sorry, something went wrong. Please try again.", sender: "bot" as const },
+          {
+            text: `Sorry, something went wrong. Please try again. (${
+              error instanceof Error ? error.message : "Unknown error"
+            })`,
+            sender: "bot" as const,
+          },
         ]);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
+
+  // If no token, show loading or redirect
+  if (!token) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingContainer}>
+          <p>Loading chat interface...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -81,30 +140,39 @@ const ChatInterface: React.FC = () => {
             key={index}
             style={{
               ...styles.messageContainer,
-              ...(message.sender === "user" ? styles.userContainer : styles.botContainer),
-            }}
-          >
+              ...(message.sender === "user"
+                ? styles.userContainer
+                : styles.botContainer),
+            }}>
             <div
               style={{
                 ...styles.avatar,
-                ...(message.sender === "user" ? styles.userAvatar : styles.botAvatar),
-              }}
-            >
+                ...(message.sender === "user"
+                  ? styles.userAvatar
+                  : styles.botAvatar),
+              }}>
               {message.sender === "user" ? "👤" : "🤖"}
             </div>
             <div
               style={{
                 ...styles.message,
-                ...(message.sender === "user" ? styles.userMessage : styles.botMessage),
-              }}
-            >
+                ...(message.sender === "user"
+                  ? styles.userMessage
+                  : styles.botMessage),
+              }}>
               <ReactMarkdown
                 components={{
                   strong: ({ node, ...props }) => (
-                    <strong style={{ fontWeight: "bold", color: "#008080" }} {...props} />
+                    <strong
+                      style={{ fontWeight: "bold", color: "#008080" }}
+                      {...props}
+                    />
                   ),
                   ul: ({ node, ...props }) => (
-                    <ul style={{ margin: "10px 0", paddingLeft: "20px" }} {...props} />
+                    <ul
+                      style={{ margin: "10px 0", paddingLeft: "20px" }}
+                      {...props}
+                    />
                   ),
                   li: ({ node, ...props }) => (
                     <li style={{ marginBottom: "10px" }} {...props} />
@@ -112,8 +180,7 @@ const ChatInterface: React.FC = () => {
                   p: ({ node, ...props }) => (
                     <p style={{ margin: "10px 0" }} {...props} />
                   ),
-                }}
-              >
+                }}>
                 {message.text}
               </ReactMarkdown>
             </div>
@@ -124,13 +191,20 @@ const ChatInterface: React.FC = () => {
             <div style={{ ...styles.avatar, ...styles.botAvatar }}>🤖</div>
             <div style={{ ...styles.message, ...styles.botMessage }}>
               <div style={styles.loadingAnimation}>
-                <div className="loading-dot" style={{ "--dot-index": 0 } as React.CSSProperties}></div>
-                <div className="loading-dot" style={{ "--dot-index": 1 } as React.CSSProperties}></div>
-                <div className="loading-dot" style={{ "--dot-index": 2 } as React.CSSProperties}></div>
+                <div
+                  className="loading-dot"
+                  style={{ "--dot-index": 0 } as React.CSSProperties}></div>
+                <div
+                  className="loading-dot"
+                  style={{ "--dot-index": 1 } as React.CSSProperties}></div>
+                <div
+                  className="loading-dot"
+                  style={{ "--dot-index": 2 } as React.CSSProperties}></div>
               </div>
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Container */}
@@ -160,6 +234,14 @@ const styles = {
     padding: "20px",
     boxSizing: "border-box" as const,
     position: "relative" as const,
+  },
+  loadingContainer: {
+    display: "flex",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    height: "100%",
+    fontSize: "22px",
+    color: "#008080",
   },
   chatWindow: {
     flex: 1,
@@ -236,6 +318,7 @@ const styles = {
     border: "2px solid #ccc",
     outline: "none",
     fontSize: "22px",
+    color: "#000000", // Explicitly set text color to black
   },
   sendButton: {
     padding: "20px 40px",
@@ -249,7 +332,7 @@ const styles = {
   loadingAnimation: {
     display: "flex",
     gap: "8px",
-  }
+  },
 };
 
 export default ChatInterface;
