@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { UserService } from '@/app/lib/api/users';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -27,18 +28,7 @@ const ForgotPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Password reset failed');
-      }
-
+      await UserService.forgotPassword({ email });
       setMessage('Password reset link sent to your email! Redirecting...');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset link');

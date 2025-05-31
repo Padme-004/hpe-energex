@@ -1,8 +1,8 @@
-//Change password is for logged in users
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { UserService } from '@/app/lib/api/users';
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState('');
@@ -38,22 +38,10 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          token,
-          newPassword
-        }),
+      await UserService.resetPassword({
+        token,
+        newPassword
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Password reset failed');
-      }
 
       setSuccess(true);
       setToken('');

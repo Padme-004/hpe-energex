@@ -2,29 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import Image from 'next/image';
-
-interface DecodedToken {
-  userId: number;
-  houseId: number;
-  email: string;
-  username: string;
-  role: string;
-  iat?: number;
-  exp?: number;
-}
-
-const decodeToken = (token: string): DecodedToken | null => {
-  if (!token) return null;
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(base64));
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return null;
-  }
-};
+import { UserService } from '@/app/lib/api/users';
 
 const SignInPage = () => {
   const [email, setEmail] = useState('');
@@ -41,41 +19,18 @@ const SignInPage = () => {
     setError('');
 
     try {
-      const response = await fetch('https://energy-optimisation-backend.onrender.com/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      const authHeader = response.headers.get('Authorization');
-      const accessToken = authHeader ? authHeader.replace('Bearer ', '') : data.accessToken;
-
-      if (!accessToken) {
-        throw new Error('No access token received');
-      }
-
-      const decoded = decodeToken(accessToken);
-      if (!decoded) {
-        throw new Error('Received invalid token format');
-      }
+      const { accessToken, decodedToken } = await UserService.login({ email, password });
 
       localStorage.removeItem('jwt');
       localStorage.removeItem('token');
       localStorage.setItem('jwt', accessToken);
 
       login(accessToken, {
-        userId: decoded.userId,
-        houseId: decoded.houseId,
-        email: decoded.email,
-        username: decoded.username,
-        role: decoded.role,
+        userId: decodedToken.userId,
+        houseId: decodedToken.houseId,
+        email: decodedToken.email,
+        username: decodedToken.username,
+        role: decodedToken.role,
       });
 
       router.push('/');
@@ -100,12 +55,10 @@ const SignInPage = () => {
       <div className="w-full max-w-6xl flex flex-col md:flex-row items-center gap-12">
         {/* Image Placeholder - Left Side */}
         <div className="hidden md:block flex-1 h-[500px] bg-gray-100 rounded-xl overflow-hidden relative">
-          {/* Replace this with your actual image */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center p-8">
               <h2 className="text-3xl font-bold mb-4 text-teal-600">Welcome to EnerGex</h2>
               <p className="text-gray-600 mb-6">Optimize your energy consumption with our AI-powered platform</p>
-              {/* Placeholder for illustration - replace with actual Image component */}
               <div className="w-full h-64 bg-teal-50 rounded-lg flex items-center justify-center">
                 <img src='signin.jpg' className='w-full h-64 bg-teal-50 rounded-lg flex items-center justify-center'></img>
               </div>
