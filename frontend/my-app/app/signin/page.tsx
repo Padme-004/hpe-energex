@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { UserService } from '@/app/lib/api/users';
+import { UserService } from '../lib/api/users';
 
 const SignInPage = () => {
   const [email, setEmail] = useState('');

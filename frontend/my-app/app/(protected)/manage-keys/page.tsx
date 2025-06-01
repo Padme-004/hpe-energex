@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
-import { ApiKey, ApiKeyService } from '@/app/lib/api/apiKey';
+import { ApiKey, ApiKeyService } from '../../lib/api/apiKey';
 
 interface DecodedToken {
   role: string;

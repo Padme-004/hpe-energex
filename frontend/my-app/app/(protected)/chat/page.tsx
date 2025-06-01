@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
-import { ChatService, ChatMessage } from "@/app/lib/api/chat";
+import { ChatService, ChatMessage } from "../../lib/api/chat";
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

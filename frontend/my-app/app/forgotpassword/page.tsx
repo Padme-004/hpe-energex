@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserService } from '@/app/lib/api/users';
+import { UserService } from '../lib/api/users';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');

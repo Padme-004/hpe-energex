@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserService } from '@/app/lib/api/users';
+import { UserService } from '../lib/api/users';
 
 const SignUpPage: React.FC = () => {
   const [formData, setFormData] = useState({

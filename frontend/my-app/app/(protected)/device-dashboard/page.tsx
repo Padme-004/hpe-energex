@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
-import { DeviceService, Device } from '@/app/lib/api/devices';
+import { DeviceService, Device } from '../../lib/api/devices';
 
 interface DecodedToken {
   role: string;

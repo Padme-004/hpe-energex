@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DeviceService } from '@/app/lib/api/devices';
+import { DeviceService } from '../../lib/api/devices';
 
 export default function DeleteDevicePage() {
   const [deviceId, setDeviceId] = useState<string>('');

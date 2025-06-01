@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserService } from '@/app/lib/api/users';
+import { UserService } from '../lib/api/users';
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState('');

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { HouseService, House } from '@/app/lib/api/houses';
+import { HouseService, House } from '../../lib/api/houses';
 
 export default function HousesDashboard() {
   const [houses, setHouses] = useState<House[]>([]);

@@ -1,7 +1,7 @@
 'use client';
-import { useAuth } from '@/app/context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { redirect } from 'next/navigation';
-import LoadingSpinner from '@/app/components/LoadingSpinner'; // Your custom spinner
+import LoadingSpinner from '../components/LoadingSpinner'; // Your custom spinner
 
 export default function ProtectedLayout({
   children,

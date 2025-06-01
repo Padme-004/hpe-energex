@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DeviceService, Device } from '@/app/lib/api/devices';
+import { DeviceService, Device } from '../../lib/api/devices';
 
 export default function DeviceDetailsPage() {
   const [deviceId, setDeviceId] = useState<string>('');

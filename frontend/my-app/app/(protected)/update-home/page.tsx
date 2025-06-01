@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { HouseService } from '@/app/lib/api/houses';
+import { HouseService } from '../../lib/api/houses';
 
 interface Home {
   houseId: number;

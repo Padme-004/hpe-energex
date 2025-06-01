@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DeviceService } from '@/app/lib/api/devices';
+import { DeviceService } from '../../lib/api/devices';
 
 interface Device {
   deviceId: number;
@@ -12,6 +12,30 @@ interface Device {
   houseId: number;
   userId: number;
 }
+
+// Helper functions to avoid code duplication
+const getCleanToken = (): string | null => {
+  const jwtToken = localStorage.getItem('jwt');
+  if (!jwtToken) return null;
+  return jwtToken.replace(/^"|"$/g, '').trim();
+};
+
+const getParsedUserInfo = (): any | null => {
+  const userData = localStorage.getItem('user');
+  if (!userData) return null;
+  
+  try {
+    let parsedUser = userData;
+    if (userData.startsWith('"') && userData.endsWith('"')) {
+      parsedUser = userData.slice(1, -1);
+    }
+    parsedUser = parsedUser.replace(/\\"/g, '"');
+    return JSON.parse(parsedUser);
+  } catch (err) {
+    console.error('Error parsing user info:', err);
+    return null;
+  }
+};
 
 export default function UpdateDevicePage() {
   const [deviceId, setDeviceId] = useState<string>('');
@@ -32,33 +56,17 @@ export default function UpdateDevicePage() {
 
   useEffect(() => {
     // Get token and user info from localStorage
-    const jwtToken = localStorage.getItem('jwt');
-    const userData = localStorage.getItem('user');
+    const cleanToken = getCleanToken();
+    const parsedUserInfo = getParsedUserInfo();
 
-    if (jwtToken) {
-      // Clean token by removing any surrounding quotes
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
+    if (cleanToken) {
       setToken(cleanToken);
     }
 
-    if (userData) {
-      try {
-        // Parse user info - handling JSON string formatting
-        let parsedUser = userData;
-        // Remove surrounding quotes if present
-        if (userData.startsWith('"') && userData.endsWith('"')) {
-          parsedUser = userData.slice(1, -1);
-        }
-        // Handle escaped quotes within the JSON
-        parsedUser = parsedUser.replace(/\\"/g, '"');
-        const userInfo = JSON.parse(parsedUser);
-        setUserInfo(userInfo);
-      } catch (err) {
-        console.error('Error parsing user info:', err);
-        router.push('/login');
-      }
+    if (parsedUserInfo) {
+      setUserInfo(parsedUserInfo);
     } else {
-      router.push('/login');
+      router.push('/signin');
     }
   }, [router]);
 
@@ -73,21 +81,12 @@ export default function UpdateDevicePage() {
     setDevice(null);
 
     try {
-      const jwtToken = localStorage.getItem('jwt');
-      const currentUserInfo = localStorage.getItem('user');
+      const cleanToken = getCleanToken();
+      const parsedUserInfo = getParsedUserInfo();
       
-      if (!jwtToken || !currentUserInfo) {
+      if (!cleanToken || !parsedUserInfo) {
         throw new Error('Session expired. Please login again.');
       }
-
-      // Clean and parse the token and user info
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
-      let parsedUser = currentUserInfo;
-      if (currentUserInfo.startsWith('"') && currentUserInfo.endsWith('"')) {
-        parsedUser = currentUserInfo.slice(1, -1);
-      }
-      parsedUser = parsedUser.replace(/\\"/g, '"');
-      const parsedUserInfo = JSON.parse(parsedUser);
 
       // Use DeviceService to fetch device details
       const deviceData = await DeviceService.getDeviceDetails(parseInt(deviceId), cleanToken);
@@ -108,28 +107,28 @@ export default function UpdateDevicePage() {
     setSuccess(null);
 
     try {
-      const jwtToken = localStorage.getItem('jwt');
-      const currentUserInfo = localStorage.getItem('user');
-  
-      if (!jwtToken || !currentUserInfo) {
+      const cleanToken = getCleanToken();
+      const parsedUserInfo = getParsedUserInfo();
+
+      if (!cleanToken || !parsedUserInfo) {
         throw new Error('Session expired. Please login again.');
       }
-  
-      const parsedUserInfo = JSON.parse(currentUserInfo);
+
       if (parsedUserInfo.role !== 'ROLE_HOUSE_OWNER') {
         throw new Error('Only house owners can update devices');
       }
 
-      // Clean the token
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
-
-      // Prepare update data
+      // Prepare update data with houseId included
       const updateData = {
         deviceName: device.deviceName,
         deviceType: device.deviceType,
         powerRating: device.powerRating,
-        location: device.location
+        location: device.location,
+        houseId: userInfo.houseId
       };
+
+      console.log('Update data being sent:', updateData);
+      console.log('Token being used:', cleanToken.substring(0, 20) + '...');
 
       // Use DeviceService to update the device
       await DeviceService.updateDevice(device.deviceId, updateData, cleanToken);
@@ -137,6 +136,7 @@ export default function UpdateDevicePage() {
       setSuccess('Device updated successfully!');
       setTimeout(() => router.push('/device-dashboard'), 2000);
     } catch (err: any) {
+      console.error('Update error:', err);
       setError(err.message);
     } finally {
       setLoading({ ...loading, update: false });
@@ -149,27 +149,25 @@ export default function UpdateDevicePage() {
     setDevice({ ...device, [name]: value });
   };
 
-  if (!token || !userInfo) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <main className="flex-grow container mx-auto px-6 py-8">
-          <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">Please login to access this page</p>
-            </div>
-            <button 
-              onClick={() => router.push('/login')}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
-            >
-              Go to Login
-            </button>
-          </div>
-        </main>
-      </div>
-    );
+  // Show loading or redirect if not authenticated
+  useEffect(() => {
+    // Only run this effect after the first render (client-side)
+    if (typeof window !== 'undefined') {
+      const cleanToken = getCleanToken();
+      const parsedUserInfo = getParsedUserInfo();
+      if (!cleanToken || !parsedUserInfo) {
+        router.replace('/signin');
+      }
+    }
+  }, [router]);
+
+  // Only render after client-side check
+  if (typeof window !== 'undefined' && (token === null || userInfo === null)) {
+    return null;
   }
 
-  if (userInfo.role !== 'ROLE_HOUSE_OWNER') {
+  // Now it's safe to check the role
+  if (userInfo && userInfo.role !== 'ROLE_HOUSE_OWNER') {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
         <main className="flex-grow container mx-auto px-6 py-8">
