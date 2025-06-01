@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { UserService, User } from '@/app/lib/api/users';
+import { UserService, User } from '../../lib/api/users';
 
 export default function UserDashboard() {
   const [users, setUsers] = useState<User[]>([]);
