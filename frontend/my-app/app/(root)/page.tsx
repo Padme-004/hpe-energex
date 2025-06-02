@@ -6,14 +6,18 @@ import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    setHasMounted(true);
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("jwt");
       setIsLoggedIn(!!token);
     }
   }, []);
+
+  if (!hasMounted) return null;
 
   return (
     <div className="min-h-screen bg-white p-8 relative">
