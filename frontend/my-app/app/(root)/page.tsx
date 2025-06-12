@@ -3,18 +3,16 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { token } = useAuth();
+  const isLoggedIn = !!token;
   const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setHasMounted(true);
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("jwt");
-      setIsLoggedIn(!!token);
-    }
   }, []);
 
   if (!hasMounted) return null;

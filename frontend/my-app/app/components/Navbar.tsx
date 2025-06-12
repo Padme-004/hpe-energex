@@ -17,11 +17,6 @@ interface DecodedToken {
 export default function Navbar() {
   const { token, logout, isLoading } = useAuth();
   const router = useRouter();
-
-  if (isLoading) {
-    return null; // Or a loading spinner if you prefer
-  }
-
   let isAdmin = false;
   if (token) {
     try {
@@ -36,6 +31,10 @@ export default function Navbar() {
     logout();
     router.push('/');
   };
+
+  if (isLoading) {
+    return null; // Or a loading spinner if you prefer
+  }
 
   return (
     <nav className="p-6" style={{ backgroundColor: '#008080' }}>
