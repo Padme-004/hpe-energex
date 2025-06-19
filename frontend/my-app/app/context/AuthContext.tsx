@@ -176,8 +176,9 @@
 //   return context;
 // };
 "use client";
-import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { UserService } from '../lib/api/users';
 
 interface User {
   userId: number | null;
@@ -213,7 +214,7 @@ const initialState: AuthState = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<AuthState>(initialState);
   // Initialize auth state from localStorage
@@ -267,18 +268,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }));
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('user');
-    setState(prev => ({
-      ...prev,
-      token: null,
-      user: null,
-    }));
-    router.push('/signin');
+  const logout = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await UserService.logout(token);
+      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setState(prev => ({
+        ...prev,
+        token: null,
+        user: null,
+      }));
+      router.push('/signin');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear local state even if API call fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setState(prev => ({
+        ...prev,
+        token: null,
+        user: null,
+      }));
+      router.push('/signin');
+    }
   }, [router]);
 
-  // Memoized context value
+ 
   const value = useMemo(() => ({
     token: state.token,
     user: state.user,
@@ -289,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isInitialized: state.isInitialized
   }), [state.token, state.user, state.isLoading, state.isInitialized, login, logout]);
 
-  // Show loading indicator while initializing
+
   if (!state.isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
