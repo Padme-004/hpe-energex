@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 import { Providers } from './providers';
-
+import ClientLayout from './components/ClientLayout';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,20 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="flex flex-col min-h-screen">
-
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen flex flex-col bg-gray-100 w-full">
         <Providers>
-        {/* Navbar at the top */}
-        <Navbar />
-
-        {/* Main content grows to fill available space */}
-        <main className="flex-grow">
-          {children}
-        </main>
-
-        {/* Footer at the bottom */}
-        <Footer />
+          <ClientLayout>
+            {children}
+          </ClientLayout>
         </Providers>
       </body>
     </html>

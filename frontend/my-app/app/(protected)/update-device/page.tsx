@@ -13,14 +13,35 @@ interface Device {
   userId: number;
 }
 
-// Helper functions to avoid code duplication
+interface UserInfo {
+  userId: number;
+  houseId: number;
+  role: string;
+}
+
+interface PageState {
+  deviceId: string;
+  device: Device | null;
+  loading: {
+    fetch: boolean;
+    update: boolean;
+  };
+  error: string | null;
+  success: string | null;
+  token: string | null;
+  userInfo: UserInfo | null;
+  initialized: boolean;
+}
+
 const getCleanToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
   const jwtToken = localStorage.getItem('jwt');
   if (!jwtToken) return null;
   return jwtToken.replace(/^"|"$/g, '').trim();
 };
 
-const getParsedUserInfo = (): any | null => {
+const getParsedUserInfo = (): UserInfo | null => {
+  if (typeof window === 'undefined') return null;
   const userData = localStorage.getItem('user');
   if (!userData) return null;
   
@@ -38,146 +59,162 @@ const getParsedUserInfo = (): any | null => {
 };
 
 export default function UpdateDevicePage() {
-  const [deviceId, setDeviceId] = useState<string>('');
-  const [device, setDevice] = useState<Device | null>(null);
-  const [loading, setLoading] = useState({
-    fetch: false,
-    update: false
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<{
-    userId: number;
-    houseId: number;
-    role: string;
-  } | null>(null);
   const router = useRouter();
+  const [state, setState] = useState<PageState>({
+    deviceId: '',
+    device: null,
+    loading: {
+      fetch: false,
+      update: false
+    },
+    error: null,
+    success: null,
+    token: null,
+    userInfo: null,
+    initialized: false
+  });
 
   useEffect(() => {
-    // Get token and user info from localStorage
-    const cleanToken = getCleanToken();
-    const parsedUserInfo = getParsedUserInfo();
+    if (typeof window !== 'undefined') {
+      const cleanToken = getCleanToken();
+      const parsedUserInfo = getParsedUserInfo();
 
-    if (cleanToken) {
-      setToken(cleanToken);
-    }
+      if (!cleanToken || !parsedUserInfo) {
+        router.replace('/signin');
+        return;
+      }
 
-    if (parsedUserInfo) {
-      setUserInfo(parsedUserInfo);
-    } else {
-      router.push('/signin');
+      setState(prev => ({
+        ...prev,
+        token: cleanToken,
+        userInfo: parsedUserInfo,
+        initialized: true
+      }));
     }
   }, [router]);
 
   const fetchDevice = async () => {
-    if (!deviceId) {
-      setError('Please enter a device ID');
+    if (!state.deviceId) {
+      setState(prev => ({ ...prev, error: 'Please enter a device ID' }));
       return;
     }
 
-    setLoading({ ...loading, fetch: true });
-    setError(null);
-    setDevice(null);
+    setState(prev => ({ 
+      ...prev, 
+      loading: { ...prev.loading, fetch: true },
+      error: null,
+      device: null
+    }));
 
     try {
-      const cleanToken = getCleanToken();
-      const parsedUserInfo = getParsedUserInfo();
-      
-      if (!cleanToken || !parsedUserInfo) {
+      if (!state.token) {
         throw new Error('Session expired. Please login again.');
       }
 
-      // Use DeviceService to fetch device details
-      const deviceData = await DeviceService.getDeviceDetails(parseInt(deviceId), cleanToken);
-      setDevice(deviceData);
+      const deviceData = await DeviceService.getDeviceDetails(
+        parseInt(state.deviceId), 
+        state.token
+      );
+
+      setState(prev => ({ ...prev, device: deviceData }));
     } catch (err: any) {
-      setError(err.message);
+      setState(prev => ({ ...prev, error: err.message }));
     } finally {
-      setLoading({ ...loading, fetch: false });
+      setState(prev => ({ 
+        ...prev, 
+        loading: { ...prev.loading, fetch: false }
+      }));
     }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!device || !userInfo) return;
+    if (!state.device || !state.userInfo) return;
 
-    setLoading({ ...loading, update: true });
-    setError(null);
-    setSuccess(null);
+    setState(prev => ({ 
+      ...prev, 
+      loading: { ...prev.loading, update: true },
+      error: null,
+      success: null
+    }));
 
     try {
-      const cleanToken = getCleanToken();
-      const parsedUserInfo = getParsedUserInfo();
-
-      if (!cleanToken || !parsedUserInfo) {
+      if (!state.token || !state.userInfo) {
         throw new Error('Session expired. Please login again.');
       }
 
-      if (parsedUserInfo.role !== 'ROLE_HOUSE_OWNER') {
+      if (state.userInfo.role !== 'ROLE_HOUSE_OWNER') {
         throw new Error('Only house owners can update devices');
       }
 
-      // Prepare update data with houseId included
       const updateData = {
-        deviceName: device.deviceName,
-        deviceType: device.deviceType,
-        powerRating: device.powerRating,
-        location: device.location,
-        houseId: userInfo.houseId
+        deviceName: state.device.deviceName,
+        deviceType: state.device.deviceType,
+        powerRating: state.device.powerRating,
+        location: state.device.location,
+        houseId: state.userInfo.houseId
       };
 
-      console.log('Update data being sent:', updateData);
-      console.log('Token being used:', cleanToken.substring(0, 20) + '...');
+      await DeviceService.updateDevice(
+        state.device.deviceId, 
+        updateData, 
+        state.token
+      );
 
-      // Use DeviceService to update the device
-      await DeviceService.updateDevice(device.deviceId, updateData, cleanToken);
-
-      setSuccess('Device updated successfully!');
+      setState(prev => ({ 
+        ...prev, 
+        success: 'Device updated successfully!' 
+      }));
       setTimeout(() => router.push('/device-dashboard'), 2000);
     } catch (err: any) {
       console.error('Update error:', err);
-      setError(err.message);
+      setState(prev => ({ ...prev, error: err.message }));
     } finally {
-      setLoading({ ...loading, update: false });
+      setState(prev => ({ 
+        ...prev, 
+        loading: { ...prev.loading, update: false }
+      }));
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    if (!device) return;
+    if (!state.device) return;
     const { name, value } = e.target;
-    setDevice({ ...device, [name]: value });
+    setState(prev => ({ 
+      ...prev, 
+      device: { ...prev.device!, [name]: value }
+    }));
   };
 
-  // Show loading or redirect if not authenticated
-  useEffect(() => {
-    // Only run this effect after the first render (client-side)
-    if (typeof window !== 'undefined') {
-      const cleanToken = getCleanToken();
-      const parsedUserInfo = getParsedUserInfo();
-      if (!cleanToken || !parsedUserInfo) {
-        router.replace('/signin');
-      }
-    }
-  }, [router]);
+  const handleDeviceIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setState(prev => ({ ...prev, deviceId: e.target.value }));
+  };
 
-  // Only render after client-side check
-  if (typeof window !== 'undefined' && (token === null || userInfo === null)) {
+  if (!state.initialized) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!state.token || !state.userInfo) {
     return null;
   }
 
-  // Now it's safe to check the role
-  if (userInfo && userInfo.role !== 'ROLE_HOUSE_OWNER') {
+  if (state.userInfo.role !== 'ROLE_HOUSE_OWNER') {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
-        <main className="flex-grow container mx-auto px-6 py-8">
-          <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
+        <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
+          <div className="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md">
             <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
               <p className="text-red-700">Only house owners can update devices</p>
             </div>
             <button 
               onClick={() => router.push('/device-dashboard')}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+              className="w-full px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
             >
               Back to Dashboard
             </button>
@@ -189,27 +226,27 @@ export default function UpdateDevicePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <main className="flex-grow container mx-auto px-6 py-8">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold" style={{ color: '#008080' }}>Update Device</h1>
+      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#008080' }}>Update Device</h1>
             <button 
               onClick={() => router.push('/device-dashboard')}
-              className="px-4 py-2 text-teal-600 hover:text-teal-800"
+              className="w-full sm:w-auto px-4 py-2 text-teal-600 hover:text-teal-800 border border-teal-600 rounded-md"
             >
               ← Back to Dashboard
             </button>
           </div>
 
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">{error}</p>
+          {state.error && (
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6 rounded-md">
+              <p className="text-red-700">{state.error}</p>
             </div>
           )}
 
-          {success && (
-            <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
-              <p className="text-green-700">{success}</p>
+          {state.success && (
+            <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6 rounded-md">
+              <p className="text-green-700">{state.success}</p>
             </div>
           )}
 
@@ -218,33 +255,33 @@ export default function UpdateDevicePage() {
               <label htmlFor="deviceId" className="block text-sm font-medium text-gray-700 mb-1">
                 Enter Device ID to Update*
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   id="deviceId"
-                  value={deviceId}
-                  onChange={(e) => setDeviceId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-black"
+                  value={state.deviceId}
+                  onChange={handleDeviceIdChange}
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md text-black"
                   placeholder="Enter device ID (e.g., 16)"
                 />
                 <button
                   onClick={fetchDevice}
-                  disabled={loading.fetch || !deviceId}
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400"
+                  disabled={state.loading.fetch || !state.deviceId}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-400 whitespace-nowrap"
                 >
-                  {loading.fetch ? 'Loading...' : 'Find Device'}
+                  {state.loading.fetch ? 'Loading...' : 'Find Device'}
                 </button>
               </div>
             </div>
 
-            {device && (
+            {state.device && (
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Device ID
                   </label>
                   <div className="px-3 py-2 bg-gray-100 text-black rounded-md">
-                    {device.deviceId}
+                    {state.device.deviceId}
                   </div>
                 </div>
 
@@ -256,7 +293,7 @@ export default function UpdateDevicePage() {
                     type="text"
                     id="deviceName"
                     name="deviceName"
-                    value={device.deviceName}
+                    value={state.device.deviceName}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -270,7 +307,7 @@ export default function UpdateDevicePage() {
                   <select
                     id="deviceType"
                     name="deviceType"
-                    value={device.deviceType}
+                    value={state.device.deviceType}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -291,7 +328,7 @@ export default function UpdateDevicePage() {
                     type="text"
                     id="powerRating"
                     name="powerRating"
-                    value={device.powerRating}
+                    value={state.device.powerRating}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -307,7 +344,7 @@ export default function UpdateDevicePage() {
                     type="text"
                     id="location"
                     name="location"
-                    value={device.location}
+                    value={state.device.location}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -318,10 +355,10 @@ export default function UpdateDevicePage() {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    disabled={loading.update}
-                    className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400"
+                    disabled={state.loading.update}
+                    className="w-full sm:w-auto px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-400"
                   >
-                    {loading.update ? 'Updating...' : 'Update Device'}
+                    {state.loading.update ? 'Updating...' : 'Update Device'}
                   </button>
                 </div>
               </form>

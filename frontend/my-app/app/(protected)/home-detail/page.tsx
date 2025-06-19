@@ -9,30 +9,32 @@ export default function HomeDetailsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<{
-    userId: number;
-    role: string;
-  } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ userId: number; role: string } | null>(null);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const jwtToken = localStorage.getItem('jwt');
     const storedUserInfo = localStorage.getItem('user');
 
-    if (jwtToken) {
-      setToken(jwtToken);
-    }
+    if (jwtToken) setToken(jwtToken);
+
     if (storedUserInfo) {
       try {
         setUserInfo(JSON.parse(storedUserInfo));
       } catch (err) {
         console.error('Error parsing user info:', err);
-        router.push('/login');
       }
-    } else {
+    }
+
+    setIsAuthChecked(true);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthChecked && (!token || !userInfo)) {
       router.push('/login');
     }
-  }, [router]);
+  }, [isAuthChecked, token, userInfo, router]);
 
   const fetchHomeDetails = async () => {
     if (!homeId) {
@@ -54,28 +56,16 @@ export default function HomeDetailsPage() {
       setHome(homeData);
     } catch (err: any) {
       console.error('Fetch home error:', err);
-      setError(err.message || 'Failed to fetch home details');
+      setError(err?.response?.data?.message || err.message || 'Failed to fetch home details');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!token || !userInfo) {
+  if (!isAuthChecked) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <main className="flex-grow container mx-auto px-6 py-8">
-          <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">Please login to access this page</p>
-            </div>
-            <button 
-              onClick={() => router.push('/login')}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
-            >
-              Go to Login
-            </button>
-          </div>
-        </main>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600 text-lg">Checking authentication...</p>
       </div>
     );
   }
@@ -85,17 +75,17 @@ export default function HomeDetailsPage() {
       <main className="flex-grow container mx-auto px-6 py-8">
         <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold" style={{ color: '#008080' }}>Home Details</h1>
-            <button 
+            <h1 className="text-3xl font-bold text-teal-700">Home Details</h1>
+            <button
               onClick={() => router.push('/home-dashboard')}
               className="px-4 py-2 text-teal-600 hover:text-teal-800"
             >
-              ← Back to Dashboard
+              ← Back
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6 break-words">
               <p className="text-red-700">{error}</p>
             </div>
           )}
@@ -105,16 +95,16 @@ export default function HomeDetailsPage() {
               <label htmlFor="homeId" className="block text-sm font-medium text-gray-700 mb-1">
                 Enter Home ID*
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="text"
                   id="homeId"
                   name="homeId"
                   value={homeId}
                   onChange={(e) => setHomeId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-black"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md text-black"
                   required
-                  placeholder="Enter home ID (e.g., 1)"
+                  placeholder="e.g., 1"
                 />
                 <button
                   onClick={fetchHomeDetails}
@@ -128,9 +118,7 @@ export default function HomeDetailsPage() {
 
             {home && (
               <div className="border border-gray-200 rounded-lg p-4">
-                <h2 className="text-xl font-semibold mb-4" style={{ color: '#008080' }}>
-                  Home Information
-                </h2>
+                <h2 className="text-xl font-semibold mb-4 text-teal-700">Home Information</h2>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Home ID:</span>

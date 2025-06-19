@@ -9,164 +9,203 @@ interface Home {
   location: string;
 }
 
+interface UserInfo {
+  userId: number;
+  role: string;
+}
+
+interface PageState {
+  homeId: string;
+  home: Home | null;
+  loading: {
+    fetch: boolean;
+    update: boolean;
+  };
+  error: string | null;
+  success: string | null;
+  token: string | null;
+  userInfo: UserInfo | null;
+  initialized: boolean;
+}
+
+const getCleanToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const jwtToken = localStorage.getItem('jwt');
+  if (!jwtToken) return null;
+  return jwtToken.replace(/^"|"$/g, '').trim();
+};
+
+const getParsedUserInfo = (): UserInfo | null => {
+  if (typeof window === 'undefined') return null;
+  const userData = localStorage.getItem('user');
+  if (!userData) return null;
+  
+  try {
+    let parsedUser = userData;
+    if (userData.startsWith('"') && userData.endsWith('"')) {
+      parsedUser = userData.slice(1, -1);
+    }
+    parsedUser = parsedUser.replace(/\\"/g, '"');
+    return JSON.parse(parsedUser);
+  } catch (err) {
+    console.error('Error parsing user info:', err);
+    return null;
+  }
+};
+
 export default function UpdateHomePage() {
-  const [homeId, setHomeId] = useState<string>('');
-  const [home, setHome] = useState<Home | null>(null);
-  const [loading, setLoading] = useState({
-    fetch: false,
-    update: false
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<{
-    userId: number;
-    role: string;
-  } | null>(null);
   const router = useRouter();
+  const [state, setState] = useState<PageState>({
+    homeId: '',
+    home: null,
+    loading: {
+      fetch: false,
+      update: false
+    },
+    error: null,
+    success: null,
+    token: null,
+    userInfo: null,
+    initialized: false
+  });
 
   useEffect(() => {
-    const jwtToken = localStorage.getItem('jwt');
-    const userData = localStorage.getItem('user');
+    if (typeof window !== 'undefined') {
+      const cleanToken = getCleanToken();
+      const parsedUserInfo = getParsedUserInfo();
 
-    if (jwtToken) {
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
-      setToken(cleanToken);
-    }
-
-    if (userData) {
-      try {
-        let parsedUser = userData;
-        if (userData.startsWith('"') && userData.endsWith('"')) {
-          parsedUser = userData.slice(1, -1);
-        }
-        parsedUser = parsedUser.replace(/\\"/g, '"');
-        const userInfo = JSON.parse(parsedUser);
-        setUserInfo(userInfo);
-      } catch (err) {
-        console.error('Error parsing user info:', err);
-        router.push('/login');
+      if (!cleanToken || !parsedUserInfo) {
+        router.replace('/login');
+        return;
       }
-    } else {
-      router.push('/login');
+
+      setState(prev => ({
+        ...prev,
+        token: cleanToken,
+        userInfo: parsedUserInfo,
+        initialized: true
+      }));
     }
   }, [router]);
 
   const fetchHome = async () => {
-    if (!homeId) {
-      setError('Please enter a home ID');
+    if (!state.homeId) {
+      setState(prev => ({ ...prev, error: 'Please enter a home ID' }));
       return;
     }
 
-    setLoading({ ...loading, fetch: true });
-    setError(null);
-    setHome(null);
+    setState(prev => ({ 
+      ...prev, 
+      loading: { ...prev.loading, fetch: true },
+      error: null,
+      home: null
+    }));
 
     try {
-      const jwtToken = localStorage.getItem('jwt');
-      const currentUserInfo = localStorage.getItem('user');
-      
-      if (!jwtToken || !currentUserInfo) {
+      if (!state.token) {
         throw new Error('Session expired. Please login again.');
       }
 
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
-      let parsedUser = currentUserInfo;
-      if (currentUserInfo.startsWith('"') && currentUserInfo.endsWith('"')) {
-        parsedUser = currentUserInfo.slice(1, -1);
+      const homeData = await HouseService.getHouseDetails(state.homeId, state.token);
+      
+      if (!homeData) {
+        throw new Error('Home ID doesn\'t exist');
       }
-      parsedUser = parsedUser.replace(/\\"/g, '"');
-      const parsedUserInfo = JSON.parse(parsedUser);
-
-      // Use HouseService to fetch home details
-      const homeData = await HouseService.getHouseDetails(homeId, cleanToken);
-      setHome(homeData);
+      
+      setState(prev => ({ ...prev, home: homeData }));
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message.includes('404') || err.message.includes('not found') 
+        ? 'Home ID doesn\'t exist' 
+        : err.message;
+      setState(prev => ({ ...prev, error: errorMessage }));
     } finally {
-      setLoading({ ...loading, fetch: false });
+      setState(prev => ({ 
+        ...prev, 
+        loading: { ...prev.loading, fetch: false }
+      }));
     }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!home || !userInfo) return;
+    if (!state.home || !state.userInfo) return;
 
-    setLoading({ ...loading, update: true });
-    setError(null);
-    setSuccess(null);
+    setState(prev => ({ 
+      ...prev, 
+      loading: { ...prev.loading, update: true },
+      error: null,
+      success: null
+    }));
 
     try {
-      const jwtToken = localStorage.getItem('jwt');
-      const currentUserInfo = localStorage.getItem('user');
-  
-      if (!jwtToken || !currentUserInfo) {
+      if (!state.token || !state.userInfo) {
         throw new Error('Session expired. Please login again.');
       }
 
-      // Only ADMIN can update homes
-      const parsedUserInfo = JSON.parse(currentUserInfo);
-      if (parsedUserInfo.role !== 'ROLE_ADMIN') {
+      if (state.userInfo.role !== 'ROLE_ADMIN') {
         throw new Error('Only administrators can update homes');
       }
 
-      const cleanToken = jwtToken.replace(/^"|"$/g, '').trim();
-
-      // Prepare update data
       const updateData = {
-        houseName: home.houseName,
-        location: home.location
+        houseName: state.home.houseName,
+        location: state.home.location
       };
 
-      // Use HouseService to update the home
-      await HouseService.updateHouse(home.houseId, updateData, cleanToken);
+      await HouseService.updateHouse(state.home.houseId, updateData, state.token);
 
-      setSuccess('Home updated successfully!');
+      setState(prev => ({ 
+        ...prev, 
+        success: 'Home updated successfully!' 
+      }));
       setTimeout(() => router.push('/home-dashboard'), 2000);
     } catch (err: any) {
-      setError(err.message);
+      setState(prev => ({ ...prev, error: err.message }));
     } finally {
-      setLoading({ ...loading, update: false });
+      setState(prev => ({ 
+        ...prev, 
+        loading: { ...prev.loading, update: false }
+      }));
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!home) return;
+    if (!state.home) return;
     const { name, value } = e.target;
-    setHome({ ...home, [name]: value });
+    setState(prev => ({ 
+      ...prev, 
+      home: { ...prev.home!, [name]: value }
+    }));
   };
 
-  if (!token || !userInfo) {
+  const handleHomeIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setState(prev => ({ ...prev, homeId: e.target.value }));
+  };
+
+  if (!state.initialized) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <main className="flex-grow container mx-auto px-6 py-8">
-          <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">Please login to access this page</p>
-            </div>
-            <button 
-              onClick={() => router.push('/login')}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
-            >
-              Go to Login
-            </button>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  if (userInfo.role !== 'ROLE_ADMIN') {
+  if (!state.token || !state.userInfo) {
+    return null;
+  }
+
+  if (state.userInfo.role !== 'ROLE_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
-        <main className="flex-grow container mx-auto px-6 py-8">
-          <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+        <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
+          <div className="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md">
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6 rounded-md">
               <p className="text-red-700">Only administrators can update homes</p>
             </div>
             <button 
               onClick={() => router.push('/home-dashboard')}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+              className="w-full px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
             >
               Back to Dashboard
             </button>
@@ -178,27 +217,27 @@ export default function UpdateHomePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <main className="flex-grow container mx-auto px-6 py-8">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold" style={{ color: '#008080' }}>Update Home</h1>
+      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#008080' }}>Update Home</h1>
             <button 
               onClick={() => router.push('/home-dashboard')}
-              className="px-4 py-2 text-teal-600 hover:text-teal-800"
+              className="w-full sm:w-auto px-4 py-2 text-teal-600 hover:text-teal-800 border border-teal-600 rounded-md"
             >
               ← Back to Dashboard
             </button>
           </div>
 
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">{error}</p>
+          {state.error && (
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6 rounded-md">
+              <p className="text-red-700">{state.error}</p>
             </div>
           )}
 
-          {success && (
-            <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
-              <p className="text-green-700">{success}</p>
+          {state.success && (
+            <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6 rounded-md">
+              <p className="text-green-700">{state.success}</p>
             </div>
           )}
 
@@ -207,33 +246,33 @@ export default function UpdateHomePage() {
               <label htmlFor="homeId" className="block text-sm font-medium text-gray-700 mb-1">
                 Enter Home ID to Update*
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   id="homeId"
-                  value={homeId}
-                  onChange={(e) => setHomeId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-black"
+                  value={state.homeId}
+                  onChange={handleHomeIdChange}
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md text-black"
                   placeholder="Enter home ID (e.g., 3)"
                 />
                 <button
                   onClick={fetchHome}
-                  disabled={loading.fetch || !homeId}
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400"
+                  disabled={state.loading.fetch || !state.homeId}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-400 whitespace-nowrap"
                 >
-                  {loading.fetch ? 'Loading...' : 'Find Home'}
+                  {state.loading.fetch ? 'Loading...' : 'Find Home'}
                 </button>
               </div>
             </div>
 
-            {home && (
+            {state.home && (
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Home ID
                   </label>
                   <div className="px-3 py-2 bg-gray-100 text-black rounded-md">
-                    {home.houseId}
+                    {state.home.houseId}
                   </div>
                 </div>
 
@@ -245,7 +284,7 @@ export default function UpdateHomePage() {
                     type="text"
                     id="houseName"
                     name="houseName"
-                    value={home.houseName}
+                    value={state.home.houseName}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -260,7 +299,7 @@ export default function UpdateHomePage() {
                     type="text"
                     id="location"
                     name="location"
-                    value={home.location}
+                    value={state.home.location}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-black"
                     required
@@ -271,10 +310,10 @@ export default function UpdateHomePage() {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    disabled={loading.update}
-                    className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400"
+                    disabled={state.loading.update}
+                    className="w-full sm:w-auto px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:bg-gray-400"
                   >
-                    {loading.update ? 'Updating...' : 'Update Home'}
+                    {state.loading.update ? 'Updating...' : 'Update Home'}
                   </button>
                 </div>
               </form>

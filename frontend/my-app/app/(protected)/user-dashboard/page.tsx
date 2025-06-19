@@ -4,11 +4,21 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { UserService, User } from '../../lib/api/users';
 
+interface DashboardState {
+  users: User[];
+  loading: boolean;
+  error: string | null;
+  success: string | null;
+}
+
 export default function UserDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // All hooks called unconditionally at the top
+  const [state, setState] = useState<DashboardState>({
+    users: [],
+    loading: true,
+    error: null,
+    success: null
+  });
   const { token, logout } = useAuth();
   const router = useRouter();
 
@@ -23,22 +33,21 @@ export default function UserDashboard() {
       }
 
       const usersData = await UserService.getAllUsers(token);
-      setUsers(usersData);
+      setState(prev => ({ ...prev, users: usersData, error: null }));
     } catch (err: any) {
       console.error('Failed to fetch users:', err);
       if (err.message.includes('Session expired')) {
         logout();
       }
-      setError(err.message || 'Failed to load users.');
+      setState(prev => ({ ...prev, error: err.message || 'Failed to load users.' }));
     } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, loading: false }));
     }
   };
 
   const updateStatus = async (userId: number, newStatus: string) => {
     try {
-      setError(null);
-      setSuccess(null);
+      setState(prev => ({ ...prev, error: null, success: null }));
       
       if (!token) {
         throw new Error('No authentication token found');
@@ -49,16 +58,22 @@ export default function UserDashboard() {
         token
       );
 
-      setUsers(users.map(user => 
-        user.userId === userId ? { ...user, profileStatus: newStatus } : user
-      ));
-      setSuccess(`Status updated to ${newStatus} for user ${userId}`);
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(user => 
+          user.userId === userId ? { ...user, profileStatus: newStatus } : user
+        ),
+        success: `Status updated to ${newStatus} for user ${userId}`
+      }));
     } catch (err: any) {
       console.error('Update error:', err);
       if (err.message.includes('Session expired')) {
         logout();
       }
-      setError(err.message || 'Failed to update status. Please check your permissions.');
+      setState(prev => ({ 
+        ...prev, 
+        error: err.message || 'Failed to update status. Please check your permissions.' 
+      }));
     }
   };
 
@@ -68,38 +83,42 @@ export default function UserDashboard() {
     }
   }, [token]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <main className="flex-grow container mx-auto px-6 py-8">
-        <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
-          <div className="text-center py-8">
-            <p className="text-gray-700">Loading users...</p>
+  if (state.loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <main className="flex-grow container mx-auto px-6 py-8">
+          <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
+            <div className="text-center py-8">
+              <p className="text-gray-700">Loading users...</p>
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
-  );
+        </main>
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <main className="flex-grow container mx-auto px-6 py-8">
-        <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
-          <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
-            <p className="text-red-700">{error}</p>
+  if (state.error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <main className="flex-grow container mx-auto px-6 py-8">
+          <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+              <p className="text-red-700">{state.error}</p>
+            </div>
+            <button 
+              onClick={() => {
+                setState(prev => ({ ...prev, error: null, loading: true }));
+                fetchUsers();
+              }}
+              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+            >
+              Try Again
+            </button>
           </div>
-          <button 
-            onClick={() => {
-              setError(null);
-              fetchUsers();
-            }}
-            className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </main>
-    </div>
-  );
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -107,9 +126,9 @@ export default function UserDashboard() {
         <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold mb-6" style={{ color: '#008080' }}>User Dashboard</h1>
           
-          {success && (
+          {state.success && (
             <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
-              <p className="text-green-700">{success}</p>
+              <p className="text-green-700">{state.success}</p>
             </div>
           )}
 
@@ -125,7 +144,7 @@ export default function UserDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {state.users.map((user) => (
                   <tr key={user.userId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{user.userId}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b">{user.email}</td>

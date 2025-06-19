@@ -1,300 +1,405 @@
-"use client";
-import React, { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import { useRouter } from "next/navigation";
-import { ChatService, ChatMessage } from "../../lib/api/chat";
+// 'use client';
+// import React, { useState, useEffect, useRef } from 'react';
+// import ReactMarkdown from 'react-markdown';
+// import { useRouter } from 'next/navigation';
+// import { ChatService, ChatMessage } from '../../lib/api/chat';
+
+// const ChatInterface: React.FC = () => {
+//   const [messages, setMessages] = useState<ChatMessage[]>([]);
+//   const [inputText, setInputText] = useState('');
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [token, setToken] = useState<string | null>(null);
+//   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+//   const messagesEndRef = useRef<HTMLDivElement>(null);
+//   const chatWindowRef = useRef<HTMLDivElement>(null);
+//   const router = useRouter();
+
+//   useEffect(() => {
+//     const jwtToken = localStorage.getItem('jwt');
+//     if (!jwtToken) {
+//       router.push('/signin');
+//       return;
+//     }
+//     setToken(jwtToken);
+//   }, [router]);
+
+//   useEffect(() => {
+//     if (shouldAutoScroll && token) {
+//       scrollToBottom();
+//     }
+//   }, [messages, isLoading, shouldAutoScroll, token]);
+
+//   const scrollToBottom = () => {
+//     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+//   };
+
+//   const handleScroll = () => {
+//     if (!chatWindowRef.current) return;
+//     const { scrollTop, scrollHeight, clientHeight } = chatWindowRef.current;
+//     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+//     setShouldAutoScroll(isNearBottom);
+//   };
+
+//   const handleSend = async () => {
+//     if (!inputText.trim() || !token) return;
+
+//     const userMessage: ChatMessage = { text: inputText, sender: 'user' };
+//     setMessages((prev) => [...prev, userMessage]);
+//     setInputText('');
+//     setIsLoading(true);
+//     setShouldAutoScroll(true);
+
+//     try {
+//       const response = await ChatService.sendMessage(inputText, token);
+//       const botMessage: ChatMessage = { text: response.response, sender: 'bot' };
+//       setMessages((prev) => [...prev, botMessage]);
+//     } catch (error) {
+//       console.error('Error fetching AI response:', error);
+//       const errorMessage: ChatMessage = {
+//         text: `Sorry, something went wrong. Please try again. (${error instanceof Error ? error.message : 'Unknown error'})`,
+//         sender: 'bot',
+//       };
+//       setMessages((prev) => [...prev, errorMessage]);
+
+//       if (error instanceof Error && error.message.includes('Unauthorized')) {
+//         localStorage.removeItem('jwt');
+//         router.push('/signin');
+//       }
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleKeyPress = (e: React.KeyboardEvent) => {
+//     if (e.key === 'Enter' && !e.shiftKey) {
+//       e.preventDefault();
+//       handleSend();
+//     }
+//   };
+
+//   if (!token) {
+//     return (
+//       <div className="flex items-center justify-center h-screen bg-gray-50">
+//         <p className="text-teal-700 text-xl">Loading chat interface...</p>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="flex flex-col min-h-screen bg-gray-50">
+//       {/* Chat Window */}
+//       <div
+//         ref={chatWindowRef}
+//         onScroll={handleScroll}
+//         className="flex-1 overflow-y-auto"
+//         style={{ paddingBottom: '120px' }} // Padding ensures bottom message visibility
+//       >
+//         <div className="p-4">
+//           <div className="max-w-4xl mx-auto space-y-4">
+//             {messages.map((message, index) => (
+//               <div
+//                 key={index}
+//                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+//               >
+//                 <div className={`flex max-w-[90%] md:max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+//                   <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mx-2 mt-1
+//                     ${message.sender === 'user' ? 'bg-teal-600 text-white' : 'bg-gray-300 text-gray-700'}`}
+//                   >
+//                     {message.sender === 'user' ? '👤' : '🤖'}
+//                   </div>
+//                   <div className={`p-4 rounded-2xl shadow-sm ${message.sender === 'user' 
+//                     ? 'bg-teal-600 text-white rounded-tr-md' 
+//                     : 'bg-white text-gray-800 rounded-tl-md border border-gray-200'}`}
+//                   >
+//                     <ReactMarkdown
+//                       components={{
+//                         strong: ({ node, ...props }) => <strong className="font-bold text-inherit" {...props} />,
+//                         ul: ({ node, ...props }) => <ul className="my-2 pl-5 list-disc" {...props} />,
+//                         li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+//                         p: ({ node, ...props }) => <p className="my-1 first:mt-0 last:mb-0" {...props} />,
+//                         code: ({ node, ...props }) => (
+//                           <code className={`px-1.5 py-0.5 rounded text-sm font-mono ${
+//                             message.sender === 'user' ? 'bg-teal-700 bg-opacity-50' : 'bg-gray-100 text-black'
+//                           }`} {...props} />
+//                         ),
+//                       }}
+//                     >
+//                       {message.text}
+//                     </ReactMarkdown>
+//                   </div>
+//                 </div>
+//               </div>
+//             ))}
+
+//             {isLoading && (
+//               <div className="flex justify-start">
+//                 <div className="flex max-w-[80%] flex-row">
+//                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-xl mx-2 mt-1">
+//                     🤖
+//                   </div>
+//                   <div className="p-4 rounded-2xl bg-white text-black rounded-tl-md border border-gray-200 shadow-sm">
+//                     <div className="flex space-x-1">
+//                       <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+//                       <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+//                       <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+//                     </div>
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             <div ref={messagesEndRef} />
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Input Container - Sticky to bottom, not fixed */}
+//       <div className="sticky bottom-0 bg-white border-t border-gray-200 shadow-lg z-10">
+//         <div className="p-4">
+//           <div className="max-w-4xl mx-auto flex gap-3">
+//             <textarea
+//               value={inputText}
+//               onChange={(e) => setInputText(e.target.value)}
+//               onKeyDown={handleKeyPress}
+//               className="flex-1 text-black p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-base resize-none min-h-[48px] max-h-[120px] leading-6"
+//               placeholder="Type a message..."
+//               rows={1}
+//               style={{
+//                 height: 'auto',
+//                 minHeight: '48px',
+//               }}
+//               onInput={(e) => {
+//                 const target = e.target as HTMLTextAreaElement;
+//                 target.style.height = 'auto';
+//                 target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+//               }}
+//             />
+//             <button
+//               onClick={handleSend}
+//               disabled={isLoading || !inputText.trim()}
+//               className="px-6 py-3 bg-teal-600 hover:bg-teal-700 disabled:hover:bg-teal-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium self-end"
+//             >
+//               {isLoading ? '...' : 'Send'}
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default ChatInterface;
+'use client';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { useRouter } from 'next/navigation';
+import { ChatService, ChatMessage } from '../../lib/api/chat';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState("");
+  const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatWindowRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Get JWT token from localStorage on component mount
+  // Separate auth check to prevent rapid redirects
   useEffect(() => {
-    const jwtToken = localStorage.getItem("jwt");
-    if (!jwtToken) {
-      router.push("/signin");
-      return;
-    }
-    setToken(jwtToken);
+    const checkAuth = () => {
+      const jwtToken = localStorage.getItem('jwt');
+      if (!jwtToken) {
+        setToken(null);
+        setAuthChecked(true);
+        // Delay redirect to prevent rapid mounting/unmounting
+        setTimeout(() => {
+          router.push('/signin');
+        }, 100);
+      } else {
+        setToken(jwtToken);
+        setAuthChecked(true);
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
-  // Add keyframes animation using useEffect
+  // Auto-scroll effect - only run when authenticated
   useEffect(() => {
-    const styleElement = document.createElement("style");
-    styleElement.textContent = `
-      @keyframes bounce {
-        0%, 80%, 100% { transform: translateY(0); }
-        40% { transform: translateY(-10px); }
-      }
-      .loading-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: #008080;
-        animation: bounce 1.4s infinite ease-in-out;
-        animation-delay: calc(0.16s * var(--dot-index));
-      }
-    `;
-    document.head.appendChild(styleElement);
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
+    if (shouldAutoScroll && token && authChecked) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, shouldAutoScroll, token, authChecked]);
 
-  // Auto-scroll to the bottom whenever messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = () => {
+    if (!chatWindowRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatWindowRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShouldAutoScroll(isNearBottom);
+  };
 
   const handleSend = async () => {
     if (!inputText.trim() || !token) return;
 
-    const userMessage: ChatMessage = { text: inputText, sender: "user" };
+    const userMessage: ChatMessage = { text: inputText, sender: 'user' };
     setMessages((prev) => [...prev, userMessage]);
-    setInputText("");
+    setInputText('');
     setIsLoading(true);
+    setShouldAutoScroll(true);
 
     try {
       const response = await ChatService.sendMessage(inputText, token);
-      const botMessage: ChatMessage = { 
-        text: response.response, 
-        sender: "bot" 
-      };
+      const botMessage: ChatMessage = { text: response.response, sender: 'bot' };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Error fetching AI response:", error);
+      console.error('Error fetching AI response:', error);
       const errorMessage: ChatMessage = {
-        text: `Sorry, something went wrong. Please try again. (${
-          error instanceof Error ? error.message : "Unknown error"
-        })`,
-        sender: "bot",
+        text: `Sorry, something went wrong. Please try again. (${error instanceof Error ? error.message : 'Unknown error'})`,
+        sender: 'bot',
       };
       setMessages((prev) => [...prev, errorMessage]);
 
-      if (error instanceof Error && error.message.includes("Unauthorized")) {
-        localStorage.removeItem("jwt");
-        router.push("/signin");
+      if (error instanceof Error && error.message.includes('Unauthorized')) {
+        localStorage.removeItem('jwt');
+        router.push('/signin');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Show loading while checking auth
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <p className="text-teal-700 text-xl">Loading...</p>
+      </div>
+    );
+  }
+
+  // Show redirecting message if no token
   if (!token) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <p>Loading chat interface...</p>
-        </div>
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <p className="text-teal-700 text-xl">Redirecting to sign in...</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Chat Window */}
-      <div style={styles.chatWindow}>
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            style={{
-              ...styles.messageContainer,
-              ...(message.sender === "user"
-                ? styles.userContainer
-                : styles.botContainer),
-            }}>
-            <div
-              style={{
-                ...styles.avatar,
-                ...(message.sender === "user"
-                  ? styles.userAvatar
-                  : styles.botAvatar),
-              }}>
-              {message.sender === "user" ? "👤" : "🤖"}
-            </div>
-            <div
-              style={{
-                ...styles.message,
-                ...(message.sender === "user"
-                  ? styles.userMessage
-                  : styles.botMessage),
-              }}>
-              <ReactMarkdown
-                components={{
-                  strong: ({ node, ...props }) => (
-                    <strong
-                      style={{ fontWeight: "bold", color: "#008080" }}
-                      {...props}
-                    />
-                  ),
-                  ul: ({ node, ...props }) => (
-                    <ul
-                      style={{ margin: "10px 0", paddingLeft: "20px" }}
-                      {...props}
-                    />
-                  ),
-                  li: ({ node, ...props }) => (
-                    <li style={{ marginBottom: "10px" }} {...props} />
-                  ),
-                  p: ({ node, ...props }) => (
-                    <p style={{ margin: "10px 0" }} {...props} />
-                  ),
-                }}>
-                {message.text}
-              </ReactMarkdown>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div style={{ ...styles.messageContainer, ...styles.botContainer }}>
-            <div style={{ ...styles.avatar, ...styles.botAvatar }}>🤖</div>
-            <div style={{ ...styles.message, ...styles.botMessage }}>
-              <div style={styles.loadingAnimation}>
-                <div
-                  className="loading-dot"
-                  style={{ "--dot-index": 0 } as React.CSSProperties}></div>
-                <div
-                  className="loading-dot"
-                  style={{ "--dot-index": 1 } as React.CSSProperties}></div>
-                <div
-                  className="loading-dot"
-                  style={{ "--dot-index": 2 } as React.CSSProperties}></div>
+      <div
+        ref={chatWindowRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: '120px' }}
+      >
+        <div className="p-4">
+          <div className="max-w-4xl mx-auto space-y-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`flex max-w-[90%] md:max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mx-2 mt-1
+                    ${message.sender === 'user' ? 'bg-teal-600 text-white' : 'bg-gray-300 text-gray-700'}`}
+                  >
+                    {message.sender === 'user' ? '👤' : '🤖'}
+                  </div>
+                  <div className={`p-4 rounded-2xl shadow-sm ${message.sender === 'user' 
+                    ? 'bg-teal-600 text-white rounded-tr-md' 
+                    : 'bg-white text-gray-800 rounded-tl-md border border-gray-200'}`}
+                  >
+                    <ReactMarkdown
+                      components={{
+                        strong: ({ node, ...props }) => <strong className="font-bold text-inherit" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="my-2 pl-5 list-disc" {...props} />,
+                        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                        p: ({ node, ...props }) => <p className="my-1 first:mt-0 last:mb-0" {...props} />,
+                        code: ({ node, ...props }) => (
+                          <code className={`px-1.5 py-0.5 rounded text-sm font-mono ${
+                            message.sender === 'user' ? 'bg-teal-700 bg-opacity-50' : 'bg-gray-100 text-black'
+                          }`} {...props} />
+                        ),
+                      }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="flex max-w-[80%] flex-row">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-xl mx-2 mt-1">
+                    🤖
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white text-black rounded-tl-md border border-gray-200 shadow-sm">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-teal-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
           </div>
-        )}
-        <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Container */}
-      <div style={styles.inputContainer}>
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSend()}
-          style={styles.input}
-          placeholder="Type a message..."
-        />
-        <button onClick={handleSend} style={styles.sendButton}>
-          Send
-        </button>
+      <div className="sticky bottom-0 bg-white border-t border-gray-200 shadow-lg z-10">
+        <div className="p-4">
+          <div className="max-w-4xl mx-auto flex gap-3">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyPress}
+              className="flex-1 text-black p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-base resize-none min-h-[48px] max-h-[120px] leading-6"
+              placeholder="Type a message..."
+              rows={1}
+              style={{
+                height: 'auto',
+                minHeight: '48px',
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={isLoading || !inputText.trim()}
+              className="px-6 py-3 bg-teal-600 hover:bg-teal-700 disabled:hover:bg-teal-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium self-end"
+            >
+              {isLoading ? '...' : 'Send'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-const styles = {
-  container: {
-    display: "flex",
-    flexDirection: "column" as const,
-    height: "100vh",
-    backgroundColor: "#ffffff",
-    padding: "20px",
-    boxSizing: "border-box" as const,
-    position: "relative" as const,
-  },
-  loadingContainer: {
-    display: "flex",
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
-    height: "100%",
-    fontSize: "22px",
-    color: "#008080",
-  },
-  chatWindow: {
-    flex: 1,
-    overflowY: "auto" as const,
-    marginBottom: "100px",
-    padding: "20px",
-    backgroundColor: "#f0f0f0",
-    borderRadius: "20px",
-    fontSize: "22px",
-  },
-  messageContainer: {
-    display: "flex",
-    alignItems: "flex-end",
-    marginBottom: "20px",
-  },
-  userContainer: {
-    justifyContent: "flex-end",
-  },
-  botContainer: {
-    justifyContent: "flex-start",
-  },
-  avatar: {
-    width: "60px",
-    height: "60px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 20px",
-    fontSize: "28px",
-  },
-  userAvatar: {
-    backgroundColor: "#008080",
-    color: "#ffffff",
-  },
-  botAvatar: {
-    backgroundColor: "#e0e0e0",
-    color: "#000000",
-  },
-  message: {
-    padding: "20px",
-    borderRadius: "20px",
-    maxWidth: "70%",
-    wordWrap: "break-word" as const,
-    fontSize: "22px",
-  },
-  userMessage: {
-    backgroundColor: "#008080",
-    color: "#ffffff",
-  },
-  botMessage: {
-    backgroundColor: "#e0e0e0",
-    color: "#000000",
-  },
-  inputContainer: {
-    display: "flex",
-    gap: "20px",
-    width: "90%",
-    maxWidth: "1000px",
-    position: "absolute" as const,
-    bottom: "20px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    padding: "10px",
-    backgroundColor: "#ffffff",
-    borderRadius: "15px",
-    boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
-    zIndex: 1000,
-  },
-  input: {
-    flex: 1,
-    padding: "20px",
-    borderRadius: "15px",
-    border: "2px solid #ccc",
-    outline: "none",
-    fontSize: "22px",
-    color: "#000000", // Explicitly set text color to black
-  },
-  sendButton: {
-    padding: "20px 40px",
-    backgroundColor: "#008080",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "15px",
-    cursor: "pointer",
-    fontSize: "22px",
-  },
-  loadingAnimation: {
-    display: "flex",
-    gap: "8px",
-  },
 };
 
 export default ChatInterface;
