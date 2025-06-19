@@ -1,3 +1,10 @@
+The actual code is updated thus:
+
+1. HPE-CPP-UI
+2. This repository
+
+This repository has been made so that we can host on Vercel, since free hosting does not allow access to an organization's repository
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
