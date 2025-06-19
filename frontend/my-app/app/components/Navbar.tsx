@@ -179,7 +179,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Mobile menu button */}
+        
           <button 
             onClick={toggleMenu}
             className="md:hidden text-white hover:text-gray-300"
@@ -240,7 +240,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile navigation */}
+        
         {isMenuOpen && (
           <div className="md:hidden mt-4 flex flex-col space-y-4">
             {navigationItems.common.map(item => (

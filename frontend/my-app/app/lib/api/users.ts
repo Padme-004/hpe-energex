@@ -227,4 +227,19 @@ export const UserService = {
       throw new Error(data.message || 'Password reset failed');
     }
   },
+
+  async logout(token: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/users/logout`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Logout failed');
+    }
+  },
 };
