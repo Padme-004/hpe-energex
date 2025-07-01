@@ -65,7 +65,7 @@ export const UserService = {
     });
 
     const responseText = await response.text();
-    
+
     try {
       const data = JSON.parse(responseText);
       if (!response.ok) {
@@ -140,7 +140,7 @@ export const UserService = {
     });
 
     const responseText = await response.text();
-    
+
     if (!response.ok) {
       throw new Error(responseText);
     }
@@ -204,7 +204,7 @@ export const UserService = {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(data.message || 'Password reset failed');
     }
