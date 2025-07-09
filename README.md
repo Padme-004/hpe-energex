@@ -1,7 +1,7 @@
-# HPE CPP 2025 Project - Developing AI Powered Solutions For Sustainable Resource Management
+# HPE CPP 2025 Project - Developing AI Powered Solutions For Sustainable Resource Management (Hosted Version)
 
 ## Overview
-A Next.js-based web application for managing homes and devices with role-based authentication, real-time device monitoring, and API key management.
+A Next.js-based web application for managing homes and devices with role-based authentication, real-time device monitoring, and API key management. This is the hosted version of HPE-CPP-Ui, which could not be hosted as it was part of an organization.
 
 ## Features
 - Role-based Authentication (Admin/User)
