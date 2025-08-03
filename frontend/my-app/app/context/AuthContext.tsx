@@ -56,6 +56,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedToken = localStorage.getItem('jwt');
         const storedUser = localStorage.getItem('user');
         
+        // Validate token if it exists
+        if (storedToken) {
+          try {
+            // Decode and check if token is expired
+            const payload = JSON.parse(atob(storedToken.split('.')[1]));
+            const isExpired = payload.exp * 1000 < Date.now();
+            
+            if (isExpired) {
+              // Token is expired, clear storage
+              localStorage.removeItem('jwt');
+              localStorage.removeItem('user');
+              if (mounted) {
+                setState(prev => ({
+                  ...prev,
+                  token: null,
+                  user: null,
+                  isLoading: false,
+                  isInitialized: true
+                }));
+              }
+              return;
+            }
+          } catch (tokenError) {
+            // Invalid token format, clear storage
+            console.error('Invalid token format:', tokenError);
+            localStorage.removeItem('jwt');
+            localStorage.removeItem('user');
+            if (mounted) {
+              setState(prev => ({
+                ...prev,
+                token: null,
+                user: null,
+                isLoading: false,
+                isInitialized: true
+              }));
+            }
+            return;
+          }
+        }
+        
         if (mounted) {
           setState(prev => ({
             ...prev,
@@ -67,8 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Error initializing auth:', err);
+        // Clear potentially corrupted data
+        localStorage.removeItem('jwt');
+        localStorage.removeItem('user');
         if (mounted) {
-          setState(prev => ({ ...prev, isLoading: false, isInitialized: true }));
+          setState(prev => ({ 
+            ...prev, 
+            token: null,
+            user: null,
+            isLoading: false, 
+            isInitialized: true 
+          }));
         }
       }
     };
@@ -93,22 +142,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('jwt'); // Use 'jwt' key consistently
       if (token) {
         await UserService.logout(token);
       }
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setState(prev => ({
-        ...prev,
-        token: null,
-        user: null,
-      }));
-      router.push('/signin');
     } catch (error) {
-      console.error('Logout failed:', error);
-      // Still clear local state even if API call fails
-      localStorage.removeItem('token');
+      console.error('Logout API call failed:', error);
+      // Continue with cleanup even if API call fails
+    } finally {
+      // Always clear local storage and state
+      localStorage.removeItem('jwt');
       localStorage.removeItem('user');
       setState(prev => ({
         ...prev,
