@@ -32,7 +32,7 @@ export default function HomeDetailsPage() {
 
   useEffect(() => {
     if (isAuthChecked && (!token || !userInfo)) {
-      router.push('/login');
+      router.push('/signin');
     }
   }, [isAuthChecked, token, userInfo, router]);
 

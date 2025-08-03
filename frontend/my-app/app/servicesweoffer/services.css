@@ -1,6 +1,4 @@
-/* Services.css */
 
-/* Page Container */
 .servicesPage {
     display: flex;
     flex-direction: column;
@@ -11,7 +9,6 @@
     padding: 20px;
   }
   
-  /* Heading */
   .heading {
     font-size: 2.5rem;
     font-weight: bold;
@@ -19,7 +16,6 @@
     margin-bottom: 2rem;
   }
   
-  /* Cards Container */
   .cardsContainer {
     display: flex;
     flex-direction: column;
@@ -29,7 +25,6 @@
     max-width: 800px;
   }
   
-  /* Card Styling */
   .card {
     background-color: teal;
     color: white;
@@ -41,20 +36,17 @@
     animation: float 3s ease-in-out infinite;
   }
   
-  /* Card Title */
   .cardTitle {
     font-size: 1.75rem;
     font-weight: bold;
     margin-bottom: 1rem;
   }
   
-  /* Card Description */
   .cardDescription {
     font-size: 1.25rem;
     line-height: 1.6;
   }
   
-  /* Floating Animation */
   @keyframes float {
     0% {
       transform: translateY(0);
@@ -67,7 +59,6 @@
     }
   }
   
-  /* Responsive Design */
   @media (max-width: 768px) {
     .heading {
       font-size: 2rem;

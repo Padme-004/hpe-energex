@@ -6,7 +6,6 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { useAuth } from '../context/AuthContext';
 
-// Routes that should redirect to /signin if not authenticated
 const protectedPaths = [
   '/device-dashboard',
   '/user-dashboard',
@@ -17,7 +16,6 @@ const protectedPaths = [
   '/change-password'
 ];
 
-// Routes that should redirect to / if authenticated
 const authPaths = ['/signin', '/signup'];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {

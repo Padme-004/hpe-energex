@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { UserService } from '../lib/api/users';
 
 export default function ResetPasswordPage() {
-  // All hooks declared unconditionally at the top
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -19,7 +18,6 @@ export default function ResetPasswordPage() {
     success: false
   });
 
-  // Auto-fill token from URL if present
   useEffect(() => {
     const urlToken = searchParams.get('token');
     if (urlToken) {
@@ -36,7 +34,6 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setUiState(prev => ({ ...prev, isLoading: true, error: '' }));
 
-    // Client-side validation
     if (!formData.token || !formData.newPassword || !formData.confirmPassword) {
       setUiState(prev => ({ ...prev, error: 'All fields are required', isLoading: false }));
       return;

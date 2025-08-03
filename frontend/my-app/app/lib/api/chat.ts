@@ -1,4 +1,3 @@
-// app/lib/api/chat.ts
 export interface ChatMessage {
   text: string;
   sender: "user" | "bot";

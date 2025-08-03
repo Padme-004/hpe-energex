@@ -204,13 +204,12 @@ export default function DeviceDetailsPage() {
   useEffect(() => {
     setIsClient(true);
     
-    // Move all localStorage access inside useEffect
     const jwtToken = localStorage.getItem('jwt');
     const storedUserInfo = localStorage.getItem('user');
 
     if (!jwtToken || !storedUserInfo) {
       setIsAuthenticated(false);
-      router.push('/login');
+      router.push('/signin');
       return;
     }
 
@@ -221,7 +220,7 @@ export default function DeviceDetailsPage() {
     } catch (err) {
       console.error('Error parsing user info:', err);
       setIsAuthenticated(false);
-      router.push('/login');
+      router.push('/signin');
     }
   }, [router]);
 
@@ -250,7 +249,6 @@ export default function DeviceDetailsPage() {
     }
   };
 
-  // Show loading state while client-side hydration is happening
   if (!isClient || isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -263,7 +261,6 @@ export default function DeviceDetailsPage() {
     );
   }
 
-  // Show login prompt if not authenticated
   if (!isAuthenticated || !userInfo) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -273,10 +270,10 @@ export default function DeviceDetailsPage() {
               <p className="text-red-700">Please login to access this page</p>
             </div>
             <button 
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/signin')}
               className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
             >
-              Go to Login
+              Go to Sign In
             </button>
           </div>
         </main>
@@ -284,7 +281,6 @@ export default function DeviceDetailsPage() {
     );
   }
 
-  // Main authenticated content
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { UserService } from '../lib/api/users';
 
 const ForgotPasswordPage = () => {
-  // All hooks declared unconditionally first
   const [formState, setFormState] = useState({
     email: '',
     message: '',
@@ -14,7 +13,6 @@ const ForgotPasswordPage = () => {
   });
   const router = useRouter();
 
-  // Handle redirect after success
   useEffect(() => {
     if (formState.message) {
       const timer = setTimeout(() => {
@@ -57,7 +55,6 @@ const ForgotPasswordPage = () => {
         <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold mb-4 text-teal-800">Forgot your password?</h1>
           
-          {/* Status Messages */}
           {formState.error && (
             <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
               {formState.error}

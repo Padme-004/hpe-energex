@@ -1,17 +1,14 @@
 'use client'; // Mark this as a Client Component for animations
 
 import React from 'react';
-import './services.css'; // Import CSS for styling
+import './services.css'; 
 
 const Services: React.FC = () => {
   return (
     <div className="servicesPage">
-      {/* Heading */}
       <h1 className="heading">Services</h1>
 
-      {/* Cards Container */}
       <div className="cardsContainer">
-        {/* Card 1 */}
         <div className="card">
           <h2 className="cardTitle">AI Guidance</h2>
           <p className="cardDescription">
@@ -19,7 +16,6 @@ const Services: React.FC = () => {
           </p>
         </div>
 
-        {/* Card 2 */}
         <div className="card">
           <h2 className="cardTitle">Risk Management</h2>
           <p className="cardDescription">
@@ -27,7 +23,6 @@ const Services: React.FC = () => {
           </p>
         </div>
 
-        {/* Card 3 */}
         <div className="card">
           <h2 className="cardTitle">Customized Solutions</h2>
           <p className="cardDescription">
@@ -35,7 +30,6 @@ const Services: React.FC = () => {
           </p>
         </div>
 
-        {/* Card 4*/}
         
         <div className="card">
           <h2 className="cardTitle">Personalized Analysis</h2>

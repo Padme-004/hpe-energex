@@ -23,10 +23,8 @@ export default function HousesDashboard() {
   const { token, logout } = useAuth();
   const router = useRouter();
 
-  // Memoized navigation functions
   const navigate = useCallback((path: string) => () => router.push(path), [router]);
 
-  // Fetch houses with proper error handling
   const fetchHouses = useCallback(async () => {
     if (!token) {
       setState(prev => ({
@@ -60,7 +58,6 @@ export default function HousesDashboard() {
     }
   }, [token, logout]);
 
-  // Initial data fetch
   useEffect(() => {
     fetchHouses();
   }, [fetchHouses]);

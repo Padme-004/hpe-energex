@@ -12,7 +12,6 @@ interface DashboardState {
 }
 
 export default function UserDashboard() {
-  // All hooks called unconditionally at the top
   const [state, setState] = useState<DashboardState>({
     users: [],
     loading: true,

@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { DeviceService } from '../../lib/api/devices';
 
 export default function AddDevicePage() {
-  // All hooks declared at the top unconditionally
   const [device, setDevice] = useState({
     deviceName: '',
     deviceType: 'Appliance',
@@ -19,9 +18,7 @@ export default function AddDevicePage() {
   
   const router = useRouter();
 
-  // Authentication check with better state management
   useEffect(() => {
-    // Use setTimeout to defer the auth check to avoid race conditions
     const checkAuth = () => {
       const jwtToken = localStorage.getItem('jwt');
       const storedUserInfo = localStorage.getItem('user');
@@ -44,14 +41,12 @@ export default function AddDevicePage() {
       }
     };
 
-    // Defer to next tick to avoid render conflicts
     setTimeout(checkAuth, 0);
   }, []);
 
-  // Handle navigation in a separate effect to avoid conflicts
   useEffect(() => {
     if (authState === 'unauthenticated') {
-      router.push('/login');
+      router.push('/signin');
     }
   }, [authState, router]);
 
@@ -103,7 +98,6 @@ export default function AddDevicePage() {
     }
   };
 
-  // Show loading state while checking auth
   if (authState === 'checking') {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -119,12 +113,10 @@ export default function AddDevicePage() {
     );
   }
 
-  // Don't render anything if unauthenticated (navigation will happen)
   if (authState === 'unauthenticated') {
     return null;
   }
 
-  // Permission check
   if (authState === 'unauthorized') {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -145,7 +137,6 @@ export default function AddDevicePage() {
     );
   }
 
-  // Main form render (only when authenticated)
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <main className="flex-grow container mx-auto px-6 py-8">

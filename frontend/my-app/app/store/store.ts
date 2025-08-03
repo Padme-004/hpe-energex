@@ -1,10 +1,7 @@
-// app/store/store.ts
 import { configureStore } from '@reduxjs/toolkit';
-// Remove authReducer import
 
 export const store = configureStore({
   reducer: {
-    // Remove 'auth' from reducers
   },
 });
 

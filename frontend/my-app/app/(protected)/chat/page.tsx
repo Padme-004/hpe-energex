@@ -13,14 +13,12 @@ const ChatInterface: React.FC = () => {
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Separate auth check to prevent rapid redirects
   useEffect(() => {
     const checkAuth = () => {
       const jwtToken = localStorage.getItem('jwt');
       if (!jwtToken) {
         setToken(null);
         setAuthChecked(true);
-        // Delay redirect to prevent rapid mounting/unmounting
         setTimeout(() => {
           router.push('/signin');
         }, 100);
@@ -69,7 +67,6 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  // Show loading while checking auth
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -78,7 +75,6 @@ const ChatInterface: React.FC = () => {
     );
   }
 
-  // Show redirecting message if no token
   if (!token) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -89,7 +85,6 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Chat Window */}
       <div
         ref={chatWindowRef}
         className="flex-1 overflow-y-auto"
